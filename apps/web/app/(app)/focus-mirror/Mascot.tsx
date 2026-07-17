@@ -99,6 +99,13 @@ function copyStylesInto(pipWindow: Window) {
     }
   });
   pipWindow.document.body.style.margin = '0';
+  // Force light theme in the PiP window regardless of the OS/browser dark
+  // mode preference — our globals.css has a `prefers-color-scheme: dark`
+  // media query that only backs off when `data-theme="light"` is set on
+  // <html>, and this popup's own <html> never inherits that attribute from
+  // the main page. Without this the bubble silently goes dark-mode navy.
+  pipWindow.document.documentElement.setAttribute('data-theme', 'light');
+  pipWindow.document.body.style.background = '#ffffff';
 }
 
 const Mascot = forwardRef<MascotHandle, MascotProps>(function Mascot({ mood, message, visible = false }, ref) {

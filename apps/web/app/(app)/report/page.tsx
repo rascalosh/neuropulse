@@ -220,7 +220,7 @@ export default function ReportPage() {
 
           <div className={styles.psikologGrid}>
             {tr.report.psychologists.map((psiText, index) => {
-              const psiVis = PSYCHOLOGISTS[index] || PSYCHOLOGISTS[0];
+              const psiVis = PSYCHOLOGISTS[index] || PSYCHOLOGISTS[0]!;
               return (
               <a
                 key={psiText.id}
