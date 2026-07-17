@@ -109,14 +109,13 @@
 .energyBar:nth-child(5) { height: 18px; }
 .energyBarFilled { background: var(--energy-color, var(--blue-500)); }
 
-/* Today's Progress card */
 .heroProgress {
   flex: 0 0 auto;
   background: rgba(255, 255, 255, .85);
   backdrop-filter: blur(8px);
   border-radius: 16px;
   padding: 16px 24px;
-  min-width: 168px;
+  min-width: 240px;
   position: relative;
   z-index: 1;
 }
