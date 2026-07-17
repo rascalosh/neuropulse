@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '../../utils/supabase/client';
 import { useLang } from '../../contexts/providers';
+import { getStore } from '../../lib/storage';
 import { IconMoon, IconSun, IconArrowLeft } from '../../components/Icons';
 import styles from './login.module.css';
 
@@ -207,7 +208,9 @@ function LoginContent() {
         if (data.session) {
           setSuccessMessage(t.successRegisterDirect);
           setTimeout(() => {
-            router.push('/dashboard');
+            const store = getStore();
+            const onboardingCompleted = !!store.profile?.onboardingCompleted;
+            router.push(onboardingCompleted ? '/dashboard' : '/onboarding');
           }, 1500);
         } else {
           setSuccessMessage(t.successRegisterVerify);
@@ -231,7 +234,9 @@ function LoginContent() {
 
         if (error) throw error;
 
-        router.push('/dashboard');
+        const store = getStore();
+        const onboardingCompleted = !!store.profile?.onboardingCompleted;
+        router.push(onboardingCompleted ? '/dashboard' : '/onboarding');
       }
     } catch (err: any) {
       setErrorMessage(err.message || t.generalError);
