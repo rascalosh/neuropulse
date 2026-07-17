@@ -84,7 +84,7 @@ export default function DashboardPage() {
       }
     ];
     const randomIndex = Math.floor(Math.random() * quotes.length);
-    setRandomQuote(quotes[randomIndex] || quotes[0]);
+    setRandomQuote(quotes[randomIndex] ?? quotes[0]!);
   }, [lang]);
 
   const levelInfo = getLevelInfo(store.totalXP);
