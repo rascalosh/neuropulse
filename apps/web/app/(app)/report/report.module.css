@@ -70,6 +70,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--color-border);
   margin-bottom: var(--space-4);
@@ -190,6 +192,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-top: auto;
   padding-top: 10px;
   border-top: 1px dashed var(--color-border);

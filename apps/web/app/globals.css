@@ -788,6 +788,16 @@ strong { font-weight: var(--font-weight-semibold); color: var(--color-text); }
   color: var(--color-xp-text);
 }
 
+/* Tablet: 3/4-column grids get too cramped once the viewport shrinks,
+   step them down to 2 columns before collapsing to 1 on phones */
+@media (max-width: 1023px) {
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 899px) {
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 640px) {
   .container, .container-sm, .container-md { padding: 0 var(--space-4); }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
