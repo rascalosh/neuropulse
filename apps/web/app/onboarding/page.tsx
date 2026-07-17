@@ -26,7 +26,7 @@ export default function OnboardingPage() {
 
   // Step 1
   const [name, setName] = useState('');
-  const [avatar, setAvatar] = useState(AVATARS[0]);
+  const [avatar, setAvatar] = useState<string>(AVATARS[0] ?? '🧠');
 
   // Step 2
   const [interests, setInterests] = useState<string[]>([]);
@@ -77,7 +77,7 @@ export default function OnboardingPage() {
     setKbLoading(true);
     const answers = buildAnswers();
     try {
-      const summary = await generateKnowledgeBaseSummary(name || 'Kamu', answers);
+      const summary = await generateKnowledgeBaseSummary(name || (lang === 'id' ? 'Kamu' : 'You'), answers, lang);
       setKbSummary(summary);
     } finally {
       setKbLoading(false);

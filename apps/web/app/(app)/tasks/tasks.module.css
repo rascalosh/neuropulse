@@ -1,0 +1,805 @@
+.page {
+  margin: -28px -28px -64px;
+  padding: 28px 28px 64px;
+  background: radial-gradient(circle at 8% 0%, var(--blue-50) 0%, transparent 45%);
+  min-height: calc(100vh - 66px);
+}
+
+@media (max-width: 899px) {
+  .page {
+    margin: -20px -16px -56px;
+    padding: 20px 16px 56px;
+    min-height: calc(100vh - 60px);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+}
+
+.breadcrumb {
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+/* ── Input Card ──────────────────────────────────────────── */
+.inputCard {
+  padding: var(--space-4);
+  margin-bottom: var(--space-8);
+  border: 1.5px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+  transition: box-shadow var(--duration-base) var(--ease), border-color var(--duration-base) var(--ease);
+}
+.inputCard:focus-within {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus), var(--shadow-md);
+}
+
+.inputRow {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.taskInput {
+  border: none;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+  min-height: 80px;
+  padding: 0;
+  resize: none;
+  flex: 1;
+}
+.taskInput:focus { box-shadow: none; }
+
+.taskInputRecording {
+  color: var(--color-error);
+}
+
+/* Microphone Button */
+.micBtn {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 4px;
+  transition: all var(--duration-base) var(--ease);
+}
+.micBtn:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+  transform: scale(1.08) rotate(-4deg);
+}
+.micBtn:active { transform: scale(0.95); }
+.micBtnActive {
+  background: #FEF2F2;
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.micRecordingDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-error);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.inputFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  gap: var(--space-4);
+}
+
+.inputHint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-sub);
+}
+
+.recordingHint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-error);
+  font-weight: var(--font-weight-semibold);
+}
+
+.recordingPulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-error);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+/* ── Section ─────────────────────────────────────────────── */
+.section {
+  margin-bottom: var(--space-8);
+}
+
+.taskList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── Task Card ───────────────────────────────────────────── */
+.taskCard {
+  padding: 0;
+  overflow: hidden;
+  border: 1.5px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--duration-base) var(--ease);
+}
+.taskCard:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--color-border-strong);
+}
+
+.taskHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px;
+  cursor: pointer;
+  background: var(--color-surface);
+  transition: background var(--duration-fast) var(--ease);
+}
+.taskHeader:hover { background: var(--color-bg); }
+
+.taskInfo { flex: 1; }
+
+.taskTitle {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+  line-height: var(--line-height-tight);
+  margin-bottom: 4px;
+}
+
+.taskMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-medium);
+  flex-wrap: wrap;
+}
+
+.taskActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stuckBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  color: #991B1B;
+  margin-bottom: 6px;
+}
+
+.stuckDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-error);
+  animation: pulse 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.calSynced {
+  font-size: 11px;
+  color: var(--color-success);
+}
+
+/* Circular Progress */
+.progressCircle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: var(--shadow-xs);
+  transition: transform var(--duration-base) cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.taskCard:hover .progressCircle { transform: scale(1.08); }
+.progressCircleInner {
+  width: 28px;
+  height: 28px;
+  background: var(--color-surface);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-sub);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+
+/* Decaying state */
+.taskDecaying {
+  border-color: #FCD34D;
+  background: var(--color-warning-bg);
+}
+.taskDecaying .taskHeader { background: var(--color-warning-bg); }
+.taskDecaying .taskHeader:hover { background: #FEF3C7; }
+
+/* Done State */
+.taskDone {
+  opacity: 0.6;
+  background: var(--color-bg);
+}
+.taskDone .taskHeader:hover { background: var(--color-bg); cursor: default; }
+
+/* ── Task Expanded Body ───────────────────────────────────── */
+.taskExpandedBody {
+  border-top: 1px solid var(--color-border);
+  background: var(--gray-50);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  animation: slideInBottom var(--duration-fast) var(--ease);
+}
+
+/* ── Friction Banner ─────────────────────────────────────── */
+.frictionBanner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #FFF1F2, #FFE4E6);
+  border-bottom: 1.5px solid #FECDD3;
+  flex-wrap: wrap;
+}
+
+.frictionBannerContent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+}
+
+.frictionBannerIcon {
+  font-size: 22px;
+  flex-shrink: 0;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.frictionBannerTitle {
+  font-size: 13px;
+  font-weight: var(--font-weight-bold);
+  color: #991B1B;
+  margin-bottom: 2px;
+}
+
+.frictionBannerDesc {
+  font-size: 12px;
+  color: #B91C1C;
+  line-height: 1.4;
+}
+
+.frictionBannerBtn {
+  padding: 9px 16px;
+  background: #DC2626;
+  color: white;
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: 12.5px;
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--duration-fast) var(--ease);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+.frictionBannerBtn:hover { background: #B91C1C; }
+
+/* ── Friction Card (AI Output) ───────────────────────────── */
+.frictionCard {
+  margin: 0;
+  padding: 16px;
+  background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
+  border-bottom: 1.5px solid #BFDBFE;
+}
+
+.frictionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.frictionIconRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.frictionIcon {
+  font-size: 26px;
+  flex-shrink: 0;
+}
+
+.frictionTitle {
+  font-size: 14px;
+  font-weight: var(--font-weight-bold);
+  color: var(--blue-800);
+}
+
+.frictionSub {
+  font-size: 12px;
+  color: var(--blue-600);
+  margin-top: 2px;
+}
+
+.frictionClose {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+.frictionClose:hover { background: rgba(0,0,0,0.05); }
+
+.frictionLoading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 0;
+  font-size: 13px;
+  color: var(--blue-700);
+}
+
+.frictionBody { display: flex; flex-direction: column; gap: 12px; }
+
+.frictionTypeLabel {
+  font-size: 12px;
+  font-weight: var(--font-weight-bold);
+  color: var(--blue-700);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.frictionContent {
+  font-family: 'Courier New', monospace;
+  font-size: 12.5px;
+  color: var(--gray-800);
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--blue-200);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+  line-height: 1.5;
+}
+
+.frictionActions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Task Graph — Quest Path ──────────────────────────────── */
+.questWrap {
+  position: relative;
+  padding: 28px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.questSvg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.questEdge {
+  stroke: var(--color-border-strong);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  transition: stroke var(--duration-base) var(--ease);
+}
+
+.questEdgeDone {
+  stroke: var(--color-success);
+}
+
+.questFlagNode {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: 0 auto;
+  width: fit-content;
+}
+
+.questFlag {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border-strong);
+  color: var(--color-text-muted);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--duration-base) cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.questFlagStart {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+}
+
+.questFlagTrophy {
+  border-color: var(--color-xp);
+  background: var(--color-xp-bg);
+  color: var(--color-xp);
+  animation: taskPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes taskPop {
+  0% { transform: scale(0.85); }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.questFlagLabel {
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.questFlagNodeDone .questFlagLabel { color: var(--color-success); }
+
+.questLayer {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto;
+}
+
+.questLayerParallel { max-width: 100%; }
+
+.questGroupLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 8px;
+}
+
+.questSingle { display: flex; }
+
+.questRow {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+.questRow .questNode { flex: 1; min-width: 180px; }
+
+.questNode {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease);
+  text-align: left;
+  font-family: var(--font);
+  width: 100%;
+  box-shadow: var(--shadow-sm);
+}
+.questNode:hover { border-color: var(--color-primary); box-shadow: var(--shadow-md); transform: translateY(-3px) scale(1.01); }
+.questNode:active { transform: translateY(-1px) scale(0.99); }
+
+.questNodeDone {
+  background: var(--color-success-bg);
+  border-color: var(--color-success);
+  opacity: 0.75;
+}
+.questNodeDone:hover { border-color: var(--color-success); box-shadow: var(--shadow-sm); transform: none; }
+
+.questNodeCurrent {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-bg), var(--shadow-md);
+}
+
+.questNodeSpeaking {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-bg), var(--shadow-md);
+  animation: speakingPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes speakingPulse {
+  0%, 100% { box-shadow: 0 0 0 4px var(--color-primary-bg), var(--shadow-md); }
+  50% { box-shadow: 0 0 0 8px var(--color-primary-bg), var(--shadow-lg); }
+}
+
+.questNodeLocked {
+  cursor: not-allowed;
+  opacity: 0.5;
+  filter: grayscale(0.6);
+  background: var(--color-bg);
+}
+.questNodeLocked:hover {
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-sm);
+  transform: none;
+}
+.questNodeLocked .questNodeCircle {
+  background: var(--color-bg);
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.questCurrentBadge {
+  position: absolute;
+  top: -11px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--color-primary);
+  color: white;
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  padding: 3px 9px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+  animation: bounceBadge 1.6s ease-in-out infinite;
+}
+
+@keyframes bounceBadge {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.questNodeCircle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-muted);
+  margin-top: 1px;
+  background: var(--color-bg);
+  transition: transform var(--duration-base) cubic-bezier(0.34, 1.56, 0.64, 1), background var(--duration-fast) var(--ease), border-color var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease);
+}
+.questNodeCurrent .questNodeCircle {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  transform: scale(1.1);
+}
+.questNodeDone .questNodeCircle {
+  background: linear-gradient(135deg, var(--color-success), #059669);
+  border-color: var(--color-success);
+  color: white;
+  animation: taskPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.graphParallelBadge {
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  padding: 2px 8px;
+  background: #FEF3C7;
+  color: #92400E;
+  border-radius: var(--radius-full);
+}
+
+.graphNodeContent { flex: 1; }
+
+.graphNodeTitle {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.4;
+}
+
+.graphNodeTitleDone {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+.graphNodeReframed {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  margin-bottom: 3px;
+}
+
+.graphNodeMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+/* ── Task Footer Actions ──────────────────────────────────── */
+.taskFooterActions {
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-surface);
+}
+
+.calBtn {
+  font-size: 12px;
+}
+
+.calSyncedMsg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-success);
+}
+
+@media (max-width: 640px) {
+  .inputFooter { flex-direction: column; align-items: stretch; }
+  .inputHint { text-align: center; }
+  .frictionBanner { flex-direction: column; }
+  .questRow { flex-direction: column; }
+  .questLayer { width: 100%; margin: 0; }
+  .questCurrentBadge { position: static; display: inline-block; margin-bottom: 6px; }
+}
+
+/* ── Dark mode overrides ────────────────────────────────────── */
+:global([data-theme="dark"]) .taskExpandedBody {
+  background: var(--color-bg);
+}
+:global([data-theme="dark"]) .stuckBadge {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #FCA5A5;
+}
+:global([data-theme="dark"]) .micBtnActive {
+  background: rgba(239, 68, 68, 0.12);
+}
+:global([data-theme="dark"]) .frictionBanner {
+  background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(220,38,38,0.12));
+  border-bottom-color: rgba(239, 68, 68, 0.35);
+}
+:global([data-theme="dark"]) .frictionBannerTitle {
+  color: #FCA5A5;
+}
+:global([data-theme="dark"]) .frictionBannerDesc {
+  color: #F87171;
+}
+:global([data-theme="dark"]) .frictionCard {
+  background: linear-gradient(135deg, #0F2040, #1A3055);
+  border-bottom-color: var(--blue-200, #1E3A6E);
+}
+:global([data-theme="dark"]) .frictionContent {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: var(--blue-200, #1E3A6E);
+  color: var(--color-text-sub);
+}
+:global([data-theme="dark"]) .graphParallelBadge {
+  background: rgba(245, 158, 11, 0.15);
+  color: #FCD34D;
+}
+:global([data-theme="dark"]) .taskDecaying {
+  border-color: rgba(245, 158, 11, 0.4);
+}
+:global([data-theme="dark"]) .taskDecaying .taskHeader {
+  background: rgba(245, 158, 11, 0.08);
+}
+:global([data-theme="dark"]) .taskDecaying .taskHeader:hover {
+  background: rgba(245, 158, 11, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .taskExpandedBody {
+    background: var(--color-bg);
+  }
+  :global(:root:not([data-theme="light"])) .stuckBadge {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #FCA5A5;
+  }
+  :global(:root:not([data-theme="light"])) .micBtnActive {
+    background: rgba(239, 68, 68, 0.12);
+  }
+  :global(:root:not([data-theme="light"])) .frictionBanner {
+    background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(220,38,38,0.12));
+    border-bottom-color: rgba(239, 68, 68, 0.35);
+  }
+  :global(:root:not([data-theme="light"])) .frictionBannerTitle {
+    color: #FCA5A5;
+  }
+  :global(:root:not([data-theme="light"])) .frictionBannerDesc {
+    color: #F87171;
+  }
+  :global(:root:not([data-theme="light"])) .frictionCard {
+    background: linear-gradient(135deg, #0F2040, #1A3055);
+    border-bottom-color: var(--blue-200, #1E3A6E);
+  }
+  :global(:root:not([data-theme="light"])) .frictionContent {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: var(--blue-200, #1E3A6E);
+    color: var(--color-text-sub);
+  }
+  :global(:root:not([data-theme="light"])) .graphParallelBadge {
+    background: rgba(245, 158, 11, 0.15);
+    color: #FCD34D;
+  }
+  :global(:root:not([data-theme="light"])) .taskDecaying {
+    border-color: rgba(245, 158, 11, 0.4);
+  }
+  :global(:root:not([data-theme="light"])) .taskDecaying .taskHeader {
+    background: rgba(245, 158, 11, 0.08);
+  }
+  :global(:root:not([data-theme="light"])) .taskDecaying .taskHeader:hover {
+    background: rgba(245, 158, 11, 0.12);
+  }
+}

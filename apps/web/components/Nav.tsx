@@ -83,7 +83,10 @@ export default function Nav() {
           <IconMenu size={20} />
         </button>
         <Link href="/dashboard" className={styles.brand} aria-label="NeuroPulse home">
-          <div className={styles.brandIcon} aria-hidden="true"><IconHeart size={18} /></div>
+          <div className={styles.brandIcon} aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="" className={styles.brandLogo} />
+          </div>
           <span className={styles.brandName}>NeuroPulse</span>
         </Link>
         <div className={styles.mobileRight}>
@@ -132,7 +135,10 @@ export default function Nav() {
       {/* ── Desktop sidebar ── */}
       <aside className={styles.sidebar} aria-label="Main navigation">
         <Link href="/dashboard" className={styles.brand} aria-label="NeuroPulse home">
-          <div className={styles.brandIcon} aria-hidden="true"><IconHeart size={19} /></div>
+          <div className={styles.brandIcon} aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="" className={styles.brandLogo} />
+          </div>
           <div>
             <div className={styles.brandName}>NeuroPulse</div>
             <div className={styles.brandTag}>{lang === 'id' ? 'Kerja bareng otakmu' : 'Work with your brain'}</div>
