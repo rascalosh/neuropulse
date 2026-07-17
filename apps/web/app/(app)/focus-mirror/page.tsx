@@ -232,6 +232,16 @@ export default function FocusMirrorPage() {
     return () => clearInterval(timerId);
   }, [isFocusing, timeLeft]);
 
+  // Pulse maskotnya tiap 10 detik selama sesi fokus jalan — pengingat lembut yang
+  // konsisten, bukan cuma reaktif ke drowsy/distracted detection.
+  useEffect(() => {
+    if (!isFocusing) return;
+    const intervalId = setInterval(() => {
+      triggerMascotPopup('');
+    }, 10000);
+    return () => clearInterval(intervalId);
+  }, [isFocusing, triggerMascotPopup]);
+
   // ========================================================
   // Effect terpisah: pantau pindah-tab/minimize walau kamera mati / komponen AI belum siap.
   // Ini yang bikin Kelip tetap bisa "manggil" user via OS Notification walau tab lagi

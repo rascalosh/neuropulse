@@ -110,6 +110,8 @@ export const translations = {
       kb_metric_structure: 'Kebutuhan Struktur',
       kb_metric_chunk: 'Ukuran langkah task',
       kb_metric_chunk_unit: 'menit/langkah',
+      color_title: 'Pilih warna favoritmu',
+      color_desc: 'Warna ini bakal jadi aksen di seluruh tampilan NeuroPulse. Bisa diganti lagi kapan aja dari top bar.',
     },
     // Dashboard
     dashboard: {
@@ -343,6 +345,18 @@ export const translations = {
       1: 'Benih', 2: 'Tunas', 3: 'Explorer', 4: 'Petualang',
       5: 'Warrior', 6: 'Champion', 7: 'Legend', 8: 'Mythic',
     },
+    // Edit Profile page
+    profile: {
+      title: 'Edit Profil',
+      desc: 'Ubah info dasar, warna aksen, dan jawaban kuesioner kepribadianmu — dashboard & tasking akan menyesuaikan otomatis.',
+      section_basic: 'Info Dasar',
+      section_color: 'Warna Aksen',
+      section_interests: 'Minat',
+      section_questionnaire: 'Kuesioner Kepribadian',
+      save_button: 'Simpan Perubahan',
+      saving: 'Menyimpan...',
+      saved_toast: 'Profil diperbarui!',
+    },
   },
 
   en: {
@@ -449,6 +463,8 @@ export const translations = {
       kb_metric_structure: 'Structure Need',
       kb_metric_chunk: 'Task step size',
       kb_metric_chunk_unit: 'min/step',
+      color_title: 'Pick your favorite color',
+      color_desc: "This becomes the accent color across NeuroPulse. You can change it anytime later from the top bar.",
     },
     dashboard: {
       greeting_morning: 'Good morning',
@@ -669,6 +685,17 @@ export const translations = {
     levels: {
       1: 'Seed', 2: 'Sprout', 3: 'Explorer', 4: 'Adventurer',
       5: 'Warrior', 6: 'Champion', 7: 'Legend', 8: 'Mythic',
+    },
+    profile: {
+      title: 'Edit Profile',
+      desc: 'Change your basic info, accent color, and personality questionnaire answers — the dashboard & tasking will adapt automatically.',
+      section_basic: 'Basic Info',
+      section_color: 'Accent Color',
+      section_interests: 'Interests',
+      section_questionnaire: 'Personality Questionnaire',
+      save_button: 'Save Changes',
+      saving: 'Saving...',
+      saved_toast: 'Profile updated!',
     },
   },
 } as const;

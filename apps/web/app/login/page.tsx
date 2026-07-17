@@ -3,7 +3,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '../../utils/supabase/client';
 import { useLang } from '../../contexts/providers';
-import { IconMoon, IconSun } from '../../components/Icons';
+import { IconMoon, IconSun, IconArrowLeft } from '../../components/Icons';
 import styles from './login.module.css';
 
 const LOGIN_TRANSLATIONS = {
@@ -244,6 +244,13 @@ function LoginContent() {
       <div className={styles.glowBlob1} aria-hidden="true" />
       <div className={styles.glowBlob2} aria-hidden="true" />
 
+      <div className={styles.backWrapper}>
+        <button type="button" className={styles.backBtn} onClick={() => router.push('/')}>
+          <IconArrowLeft size={15} />
+          {lang === 'id' ? 'Beranda' : 'Home'}
+        </button>
+      </div>
+
       <div className={styles.langWrapper}>
         <div className={styles.langToggle} role="group" aria-label="Language switcher">
           <button
@@ -285,7 +292,10 @@ function LoginContent() {
 
       <div className={styles.card}>
         <div className={styles.logoSection}>
-          <div className={styles.logoBadge} aria-hidden="true">🧠</div>
+          <div className={styles.logoBadge} aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="" className={styles.logoImg} />
+          </div>
           <h1 className={styles.brandTitle}>NeuroPulse</h1>
         </div>
 

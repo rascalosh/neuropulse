@@ -88,6 +88,7 @@ export default function BodyDoublePage() {
   // YouTube player states
   const [ytInput, setYtInput] = useState('');
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+  const [activeQuery, setActiveQuery] = useState<string | null>(null);
 
   // Active room states
   const [userGoal, setUserGoal] = useState('');
@@ -211,7 +212,10 @@ export default function BodyDoublePage() {
 
   const handleLoadVideo = () => {
     const id = extractYoutubeId(ytInput);
-    if (id) setActiveVideoId(id);
+    if (id) {
+      setActiveVideoId(id);
+      setActiveQuery(null);
+    }
   };
 
   const formatTime = (totalSecs: number) => {
@@ -480,7 +484,13 @@ export default function BodyDoublePage() {
                 key={preset.key}
                 className={styles.ytChip}
                 onClick={() => {
-                  setActiveVideoId(preset.videoId);
+                  if ('videoId' in preset) {
+                    setActiveVideoId(preset.videoId);
+                    setActiveQuery(null);
+                  } else {
+                    setActiveQuery(preset.query);
+                    setActiveVideoId(null);
+                  }
                 }}
               >
                 <IconPlay size={14} />
@@ -501,10 +511,14 @@ export default function BodyDoublePage() {
             <button className="btn btn-primary" onClick={handleLoadVideo}>Putar</button>
           </div>
 
-          {activeVideoId && (
+          {(activeVideoId || activeQuery) && (
             <div className={`${styles.ytPlayer} animate-in`}>
               <iframe
-                src={`https://www.youtube.com/embed/${activeVideoId}?autoplay=1`}
+                src={
+                  activeVideoId
+                    ? `https://www.youtube.com/embed/${activeVideoId}?autoplay=1`
+                    : `https://www.youtube.com/embed?autoplay=1&listType=search&list=${encodeURIComponent(activeQuery ?? '')}`
+                }
                 title="Study With Me"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen

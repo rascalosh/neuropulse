@@ -9,9 +9,10 @@ import type { User } from '@supabase/supabase-js';
 import { useLang } from '../contexts/providers';
 import { translations } from '../lib/i18n';
 import {
-  IconHeart, IconArrowRight, IconCheckSquare, IconGift,
+  IconArrowRight, IconCheckSquare, IconGift,
   IconEye, IconMessageCircle, IconZap, IconFileText,
-  IconMoon, IconSun,
+  IconMoon, IconSun, IconBrain, IconCheck, IconSparkles,
+  IconHeart, IconLeaf, IconLightbulb, IconBatteryLow, IconBatteryFull, IconFlame,
 } from '../components/Icons';
 import styles from './landing.module.css';
 
@@ -23,16 +24,16 @@ const COPY = {
     titlePre: 'Kerja ',
     titleAccent: 'bareng otakmu',
     titlePost: ', bukan melawannya.',
-    sub: 'NeuroPulse memecah task besar jadi langkah kecil, memberi reward dopamin, dan menyesuaikan diri dengan energimu — bukan sebaliknya. Tanpa penilaian. 💛',
+    sub: 'NeuroPulse memecah task besar jadi langkah kecil, memberi reward dopamin, dan menyesuaikan diri dengan energimu — bukan sebaliknya. Tanpa penilaian.',
     ctaPrimary: 'Mulai Sekarang — Gratis',
     ctaSecondary: 'Aku sudah punya akun',
     trust: ['Setup 2 menit', 'Tanpa penilaian', 'Streak tidak bisa gagal'],
     heroAlt: 'Pulse, maskot NeuroPulse — boneka otak lucu yang tersenyum',
     meetKicker: 'Kenalan dulu',
-    meetTitle: 'Ini Pulse, teman barumu 👋',
+    meetTitle: 'Ini Pulse, teman barumu',
     meetDesc: 'Pulse ikut menyesuaikan diri dengan energimu — bukan memaksamu menyesuaikan diri dengannya.',
     meetPrompt: 'Coba klik level energi di bawah ini:',
-    meetNote: '💡 Di dalam aplikasi, strategi harian dan tampilan ikut beradaptasi dengan level energimu.',
+    meetNote: 'Di dalam aplikasi, strategi harian dan tampilan ikut beradaptasi dengan level energimu.',
     featKicker: 'Fitur',
     featTitle: 'Dibuat untuk cara kerja otakmu',
     featSub: 'Bukan aplikasi produktivitas biasa — setiap fitur dirancang dari pola ADHD yang nyata.',
@@ -47,15 +48,15 @@ const COPY = {
     prinKicker: 'Prinsip kami',
     prinTitle: 'Tanpa rasa bersalah. Serius.',
     principles: [
-      { emoji: '💛', title: 'Tanpa penilaian', desc: 'Tidak ada kata "malas" di sini — hanya strategi yang belum cocok.' },
-      { emoji: '🌱', title: 'Istirahat itu valid', desc: 'Streak tidak bisa gagal. Jeda bukan kegagalan, tapi bagian dari ritme.' },
-      { emoji: '✨', title: 'Kecil itu kuat', desc: 'Mulai dari langkah 5 menit. Momentum mengalahkan kesempurnaan.' },
+      { title: 'Tanpa penilaian', desc: 'Tidak ada kata "malas" di sini — hanya strategi yang belum cocok.' },
+      { title: 'Istirahat itu valid', desc: 'Streak tidak bisa gagal. Jeda bukan kegagalan, tapi bagian dari ritme.' },
+      { title: 'Kecil itu kuat', desc: 'Mulai dari langkah 5 menit. Momentum mengalahkan kesempurnaan.' },
     ],
-    ctaTitle: 'Ready when you are 💛',
+    ctaTitle: 'Ready when you are',
     ctaDesc: 'Tidak perlu menunggu momen sempurna. Pulse sudah menunggumu.',
     ctaBtn: 'Mulai NeuroPulse',
     ctaHint: 'Gratis · Langsung jalan di browser',
-    footerText: 'Dibuat dengan 💛 untuk otak neurodivergen',
+    footerText: 'Dibuat dengan sepenuh hati untuk otak neurodivergen',
   },
   en: {
     login: 'Sign in',
@@ -64,16 +65,16 @@ const COPY = {
     titlePre: 'Work ',
     titleAccent: 'with your brain',
     titlePost: ', not against it.',
-    sub: 'NeuroPulse breaks big tasks into tiny steps, rewards you with dopamine, and adapts to your energy — not the other way around. No judgment. 💛',
+    sub: 'NeuroPulse breaks big tasks into tiny steps, rewards you with dopamine, and adapts to your energy — not the other way around. No judgment.',
     ctaPrimary: 'Start Now — Free',
     ctaSecondary: 'I already have an account',
     trust: ['2-minute setup', 'No judgment', 'Streaks can\'t break'],
     heroAlt: 'Pulse, the NeuroPulse mascot — a cute smiling brain plushie',
     meetKicker: 'Say hello',
-    meetTitle: 'Meet Pulse, your new buddy 👋',
+    meetTitle: 'Meet Pulse, your new buddy',
     meetDesc: 'Pulse adapts to your energy — instead of forcing you to adapt to it.',
     meetPrompt: 'Try clicking an energy level below:',
-    meetNote: '💡 Inside the app, your daily strategy and UI adapt to your energy level too.',
+    meetNote: 'Inside the app, your daily strategy and UI adapt to your energy level too.',
     featKicker: 'Features',
     featTitle: 'Built for how your brain works',
     featSub: 'Not your average productivity app — every feature is designed around real ADHD patterns.',
@@ -88,15 +89,15 @@ const COPY = {
     prinKicker: 'Our principles',
     prinTitle: 'Guilt-free. Seriously.',
     principles: [
-      { emoji: '💛', title: 'No judgment', desc: 'The word "lazy" doesn\'t exist here — only strategies that don\'t fit yet.' },
-      { emoji: '🌱', title: 'Rest is valid', desc: 'Streaks can\'t break. Pauses aren\'t failures — they\'re part of the rhythm.' },
-      { emoji: '✨', title: 'Small is mighty', desc: 'Start with a 5-minute step. Momentum beats perfection.' },
+      { title: 'No judgment', desc: 'The word "lazy" doesn\'t exist here — only strategies that don\'t fit yet.' },
+      { title: 'Rest is valid', desc: 'Streaks can\'t break. Pauses aren\'t failures — they\'re part of the rhythm.' },
+      { title: 'Small is mighty', desc: 'Start with a 5-minute step. Momentum beats perfection.' },
     ],
-    ctaTitle: 'Ready when you are 💛',
+    ctaTitle: 'Ready when you are',
     ctaDesc: 'No need to wait for the perfect moment. Pulse is already waiting for you.',
     ctaBtn: 'Start NeuroPulse',
     ctaHint: 'Free · Runs right in your browser',
-    footerText: 'Made with 💛 for neurodivergent brains',
+    footerText: 'Made with heart for neurodivergent brains',
   },
 } as const;
 
@@ -112,6 +113,10 @@ const FEATURE_ICONS = [
 ];
 
 const PRINCIPLE_TINTS = [styles.tintAmber, styles.tintGreen, styles.tintPurple];
+const PRINCIPLE_ICONS = [IconHeart, IconLeaf, IconSparkles];
+
+// Level 1-5: exhausted → low battery → medium → high energy → on fire.
+const ENERGY_ICONS = [IconMoon, IconBatteryLow, IconZap, IconBatteryFull, IconFlame];
 
 export default function LandingPage() {
   const { lang, setLang } = useLang();
@@ -174,7 +179,10 @@ export default function LandingPage() {
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <Link href="/" className={styles.brand} aria-label="NeuroPulse">
-            <span className={styles.brandIcon} aria-hidden="true"><IconHeart size={18} /></span>
+            <span className={styles.brandIcon} aria-hidden="true">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.svg" alt="" className={styles.brandLogo} />
+            </span>
             <span className={styles.brandName}>NeuroPulse</span>
           </Link>
           <div className={styles.headerRight}>
@@ -237,7 +245,7 @@ export default function LandingPage() {
         {/* ── Hero ── */}
         <section className={styles.hero}>
           <div className={styles.heroContent}>
-            <span className={styles.heroBadge}>🧠 {t.badge}</span>
+            <span className={styles.heroBadge}><IconBrain size={14} /> {t.badge}</span>
             <h1 className={styles.heroTitle}>
               {t.titlePre}
               <span className={styles.accent}>{t.titleAccent}</span>
@@ -264,7 +272,7 @@ export default function LandingPage() {
             <div className={styles.trustRow}>
               {t.trust.map((item) => (
                 <span key={item} className={styles.trustItem}>
-                  <span className={styles.trustCheck} aria-hidden="true">✓</span> {item}
+                  <span className={styles.trustCheck} aria-hidden="true"><IconCheck size={12} /></span> {item}
                 </span>
               ))}
             </div>
@@ -275,14 +283,14 @@ export default function LandingPage() {
             <span className={`${styles.dot} ${styles.dotPeach}`} aria-hidden="true" />
             <span className={`${styles.dot} ${styles.dotYellow}`} aria-hidden="true" />
             <span className={`${styles.dot} ${styles.dotBlue}`} aria-hidden="true" />
-            <span className={`${styles.sparkle} ${styles.sparkleA}`} aria-hidden="true">✨</span>
-            <span className={`${styles.sparkle} ${styles.sparkleB}`} aria-hidden="true">✨</span>
+            <span className={`${styles.sparkle} ${styles.sparkleA}`} aria-hidden="true"><IconSparkles size={22} /></span>
+            <span className={`${styles.sparkle} ${styles.sparkleB}`} aria-hidden="true"><IconSparkles size={16} /></span>
             <img
-              src="/mascot-buddy.png"
+              src="/brainlandingpage.png"
               alt={t.heroAlt}
               className={styles.mascotHero}
-              width={1128}
-              height={1296}
+              width={575}
+              height={567}
             />
           </div>
         </section>
@@ -297,7 +305,11 @@ export default function LandingPage() {
           <div className={styles.energyPanel}>
             <div className={styles.energyStage}>
               <div key={energy} className={styles.bubble}>
-                {energyInfo.emoji} {energyInfo.desc}
+                {(() => {
+                  const EnergyIcon = ENERGY_ICONS[energy - 1] ?? IconZap;
+                  return <EnergyIcon size={16} className={styles.bubbleIcon} />;
+                })()}
+                {energyInfo.desc}
               </div>
               {ENERGY_LEVELS.map((lv) => {
                 const info = tr.energy[String(lv) as keyof typeof tr.energy];
@@ -319,6 +331,7 @@ export default function LandingPage() {
               <div className={styles.energyBtns} role="group" aria-label="Energy level demo">
                 {ENERGY_LEVELS.map((lv) => {
                   const info = tr.energy[String(lv) as keyof typeof tr.energy];
+                  const EnergyIcon = ENERGY_ICONS[lv - 1] ?? IconZap;
                   return (
                     <button
                       key={lv}
@@ -326,12 +339,12 @@ export default function LandingPage() {
                       onClick={() => setEnergy(lv)}
                       aria-pressed={energy === lv}
                     >
-                      <span aria-hidden="true">{info.emoji}</span> {info.label}
+                      <span aria-hidden="true"><EnergyIcon size={14} /></span> {info.label}
                     </button>
                   );
                 })}
               </div>
-              <p className={styles.energyNote}>{t.meetNote}</p>
+              <p className={styles.energyNote}><IconLightbulb size={13} className={styles.energyNoteIcon} /> {t.meetNote}</p>
             </div>
           </div>
         </section>
@@ -364,13 +377,16 @@ export default function LandingPage() {
             <h2 id="principles-title" className={styles.sectionTitle}>{t.prinTitle}</h2>
           </div>
           <div className={styles.principlesGrid}>
-            {t.principles.map((principle, i) => (
-              <div key={principle.title} className={`${styles.principleCard} ${PRINCIPLE_TINTS[i]}`}>
-                <div className={styles.principleEmoji} aria-hidden="true">{principle.emoji}</div>
-                <h3 className={styles.principleTitle}>{principle.title}</h3>
-                <p className={styles.principleDesc}>{principle.desc}</p>
-              </div>
-            ))}
+            {t.principles.map((principle, i) => {
+              const PrincipleIcon = PRINCIPLE_ICONS[i] ?? IconHeart;
+              return (
+                <div key={principle.title} className={`${styles.principleCard} ${PRINCIPLE_TINTS[i]}`}>
+                  <div className={styles.principleEmoji} aria-hidden="true"><PrincipleIcon size={22} /></div>
+                  <h3 className={styles.principleTitle}>{principle.title}</h3>
+                  <p className={styles.principleDesc}>{principle.desc}</p>
+                </div>
+              );
+            })}
           </div>
         </section>
 
@@ -390,7 +406,9 @@ export default function LandingPage() {
               height={567}
               loading="lazy"
             />
-            <h2 id="cta-title" className={styles.ctaTitle}>{t.ctaTitle}</h2>
+            <h2 id="cta-title" className={styles.ctaTitle}>
+              {t.ctaTitle} <IconHeart size={22} className={styles.ctaTitleIcon} />
+            </h2>
             <p className={styles.ctaDesc}>{t.ctaDesc}</p>
             {!loading && user ? (
               <Link
@@ -412,10 +430,15 @@ export default function LandingPage() {
       {/* ── Footer ── */}
       <footer className={styles.footer}>
         <div className={styles.footerBrand}>
-          <span className={styles.brandIcon} aria-hidden="true"><IconHeart size={16} /></span>
+          <span className={styles.brandIcon} aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="" className={styles.brandLogo} />
+          </span>
           NeuroPulse
         </div>
-        <p className={styles.footerText}>{t.footerText}</p>
+        <p className={styles.footerText}>
+          {t.footerText} <IconHeart size={13} className={styles.footerHeartIcon} />
+        </p>
       </footer>
     </div>
   );

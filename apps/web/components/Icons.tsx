@@ -124,6 +124,14 @@ export function IconArrowRight({ size, ...p }: IconProps) {
   );
 }
 
+export function IconArrowLeft({ size, ...p }: IconProps) {
+  return (
+    <svg {...base(size)} {...p}>
+      <path d="M19 12H5M11 18l-6-6 6-6" />
+    </svg>
+  );
+}
+
 export function IconUser({ size, ...p }: IconProps) {
   return (
     <svg {...base(size)} {...p}>
@@ -531,6 +539,26 @@ export function IconX({ size, ...p }: IconProps) {
   return (
     <svg {...base(size)} {...p}>
       <path d="M18 6 6 18M6 6l12 12" />
+    </svg>
+  );
+}
+
+export function IconBatteryLow({ size, ...p }: IconProps) {
+  return (
+    <svg {...base(size)} {...p}>
+      <rect x="2" y="7" width="17" height="10" rx="2" />
+      <path d="M22 10v4" />
+      <path d="M6 10v4" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function IconBatteryFull({ size, ...p }: IconProps) {
+  return (
+    <svg {...base(size)} {...p}>
+      <rect x="2" y="7" width="17" height="10" rx="2" />
+      <path d="M22 10v4" />
+      <path d="M6 10v4M10 10v4M14 10v4" />
     </svg>
   );
 }

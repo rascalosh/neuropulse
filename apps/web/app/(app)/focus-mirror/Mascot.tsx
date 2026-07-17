@@ -35,42 +35,17 @@ const MOOD_COPY: Record<MascotMood, { text: string; hex: string }> = {
 
 const BUDDY_SRC = '/mascot-buddy.png';
 
-function MascotBubble({ display, message }: { display: { text: string; hex: string }; message?: string | null }) {
-  return (
-    <div className={styles.bubble}>
-      <div className={styles.bubbleTitle} style={{ color: display.hex }}>{display.text}</div>
-      {message && <div className={styles.bubbleMessage}>{message}</div>}
-      <div className={styles.bubbleTail} />
-    </div>
-  );
-}
-
-function MascotDockContent({ mood, message, visible }: MascotProps) {
-  const display = MOOD_COPY[mood];
-  return (
-    <div className={styles.dock}>
-      {visible && <MascotBubble display={display} message={message} />}
-      <img
-        src={BUDDY_SRC}
-        alt="Maskot NeuroPulse"
-        className={`${styles.buddyImg} ${visible ? styles.buddyActive : styles.buddyIdle}`}
-      />
-    </div>
-  );
-}
-
-// Isi window Document PiP — full window & center, beda dari MascotDockContent yang
-// nempel di pojok halaman biasa.
-function MascotPipContent({ mood, message, visible }: MascotProps) {
+// Isi window Document PiP — full window & center. Bubble judul selalu tampil
+// (nunjukin mood saat ini) supaya window gak keliatan kosong/blank di antara
+// trigger event; `visible` cuma nentuin apakah lagi "pulsing" (bounce sebentar)
+// vs idle mengambang biasa.
+function MascotPipContent({ mood, visible }: MascotProps) {
   const display = MOOD_COPY[mood];
   return (
     <div className={styles.pipDock}>
-      {visible && (
-        <div className={styles.pipBubble}>
-          <div className={styles.pipBubbleTitle} style={{ color: display.hex }}>{display.text}</div>
-          {message && <div className={styles.pipBubbleMessage}>{message}</div>}
-        </div>
-      )}
+      <div className={styles.pipBubble}>
+        <div className={styles.pipBubbleTitle} style={{ color: display.hex }}>{display.text}</div>
+      </div>
       <img
         src={BUDDY_SRC}
         alt="Maskot NeuroPulse"
@@ -108,6 +83,21 @@ function copyStylesInto(pipWindow: Window) {
   pipWindow.document.body.style.background = '#ffffff';
 }
 
+// Drives --pip-vmin (the smaller of the popup's own width/height, in px) so
+// the mascot/text can scale off an explicit JS-updated value instead of
+// trusting vmin/vw/vh to recompute inside this separate window — some
+// browsers are inconsistent about re-resolving viewport units live inside a
+// Document PiP window's own document, so we force it via a resize listener.
+function watchPipSize(pipWindow: Window): () => void {
+  const update = () => {
+    const vmin = Math.min(pipWindow.innerWidth, pipWindow.innerHeight);
+    pipWindow.document.documentElement.style.setProperty('--pip-vmin', `${vmin}px`);
+  };
+  update();
+  pipWindow.addEventListener('resize', update);
+  return () => pipWindow.removeEventListener('resize', update);
+}
+
 const Mascot = forwardRef<MascotHandle, MascotProps>(function Mascot({ mood, message, visible = false }, ref) {
   const [pipWindow, setPipWindow] = useState<Window | null>(null);
   const [docPipSupported, setDocPipSupported] = useState(false);
@@ -124,9 +114,16 @@ const Mascot = forwardRef<MascotHandle, MascotProps>(function Mascot({ mood, mes
     try {
       // Window PiP beneran (bukan video) — bisa di-drag-resize normal kayak window
       // biasa, dan isinya HTML/CSS asli (bukan gambar canvas), jadi gak pernah buram.
-      const win = await window.documentPictureInPicture.requestWindow({ width: 220, height: 240 });
+      // Bigger default than the bare minimum so text/mascot aren't cramped —
+      // still a real OS window, so the user can freely resize (bigger, smaller,
+      // or flattened) afterwards and the content below scales with vmin units.
+      const win = await window.documentPictureInPicture.requestWindow({ width: 320, height: 340 });
       copyStylesInto(win);
-      win.addEventListener('pagehide', () => setPipWindow(null), { once: true });
+      const stopWatching = watchPipSize(win);
+      win.addEventListener('pagehide', () => {
+        stopWatching();
+        setPipWindow(null);
+      }, { once: true });
       setPipWindow(win);
     } catch (e) {
       console.warn('Gagal membuka PiP:', e);
@@ -142,16 +139,10 @@ const Mascot = forwardRef<MascotHandle, MascotProps>(function Mascot({ mood, mes
     );
   }
 
-  return (
-    <>
-      {docPipSupported && (
-        <button onClick={openPip} className={styles.pipButton}>
-          Buka Maskot Pop-out
-        </button>
-      )}
-      <MascotDockContent mood={mood} message={message} visible={visible} />
-    </>
-  );
+  // Nothing to render outside the PiP window — no docked corner widget (it
+  // covered CompanionChatbot) and no manual "open popup" button (opening is
+  // automatic via openPip() when the focus session starts, see page.tsx).
+  return null;
 });
 
 export default Mascot;

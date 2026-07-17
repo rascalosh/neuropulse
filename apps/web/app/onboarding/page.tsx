@@ -4,15 +4,16 @@ import { useRouter } from 'next/navigation';
 import { useStorage } from '../../hooks/useStorage';
 import { useLang } from '../../contexts/providers';
 import { translations } from '../../lib/i18n';
-import { seedDemoData, deriveKnowledgeBaseMetrics, type QuestionnaireAnswers, type ADHDSubtype, type Chronotype, type MotivationStyle, type CommunicationTone, type SensorySensitivity } from '../../lib/storage';
+import { seedDemoData, deriveKnowledgeBaseMetrics, type QuestionnaireAnswers, type ADHDSubtype, type Chronotype, type MotivationStyle, type CommunicationTone, type SensorySensitivity, type AccentColor } from '../../lib/storage';
 import { generateKnowledgeBaseSummary } from '../../lib/gemini';
+import { ACCENT_COLORS, applyAccentColor } from '../../lib/theme';
 import styles from './onboarding.module.css';
 
 const AVATARS = ['🧠', '🦋', '🌈', '🐙', '🦊', '🌟', '🐢', '🔥'];
 const INTEREST_OPTIONS = ['Anime', 'Game', 'Musik', 'Masak', 'Olahraga', 'Baca', 'Film', 'Seni'];
 const TRIGGER_KEYS = ['kb_trigger_overwhelm', 'kb_trigger_perfectionism', 'kb_trigger_unclear', 'kb_trigger_boring', 'kb_trigger_fatigue', 'kb_trigger_fear'] as const;
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -28,11 +29,14 @@ export default function OnboardingPage() {
   const [name, setName] = useState('');
   const [avatar, setAvatar] = useState<string>(AVATARS[0] ?? '🧠');
 
-  // Step 2
+  // Step 2 — accent color (applied live for preview, persisted to profile at finish)
+  const [accentColor, setAccentColor] = useState<AccentColor>('blue');
+
+  // Step 3
   const [interests, setInterests] = useState<string[]>([]);
   const [keywordsRaw, setKeywordsRaw] = useState('');
 
-  // Step 3 — deep questionnaire (the "knowledge base" source material)
+  // Step 4 — deep questionnaire (the "knowledge base" source material)
   const [adhdSubtype, setAdhdSubtype] = useState<ADHDSubtype>('unsure');
   const [chronotype, setChronotype] = useState<Chronotype>('variable');
   const [focusSpanMinutes, setFocusSpanMinutes] = useState(20);
@@ -43,10 +47,10 @@ export default function OnboardingPage() {
   const [communicationTone, setCommunicationTone] = useState<CommunicationTone>('playful');
   const [sensorySensitivity, setSensorySensitivity] = useState<SensorySensitivity>('medium');
 
-  // Step 4 — energy
+  // Step 5 — energy
   const [energy, setEnergy] = useState(3);
 
-  // Step 5 — knowledge base synthesis
+  // Step 6 — knowledge base synthesis
   const [kbSummary, setKbSummary] = useState('');
   const [kbLoading, setKbLoading] = useState(false);
 
@@ -73,7 +77,7 @@ export default function OnboardingPage() {
   });
 
   const goToKnowledgeBaseStep = async () => {
-    setStep(5);
+    setStep(6);
     setKbLoading(true);
     const answers = buildAnswers();
     try {
@@ -102,6 +106,7 @@ export default function OnboardingPage() {
         interestKeywords: keywords,
         onboardingCompleted: true,
         createdAt: new Date().toISOString(),
+        accentColor,
         knowledgeBase: {
           answers,
           ...derived,
@@ -165,8 +170,41 @@ export default function OnboardingPage() {
           </>
         )}
 
-        {/* Step 2: Interests */}
+        {/* Step 2: Accent color — applied live for preview, changeable later from the top bar */}
         {step === 2 && (
+          <>
+            <h1 className={styles.stepTitle}>{t.color_title}</h1>
+            <p className={styles.stepDesc}>{t.color_desc}</p>
+
+            <div className={styles.chipGrid}>
+              {ACCENT_COLORS.map((c) => (
+                <button
+                  key={c.key}
+                  type="button"
+                  className={`${styles.chip} ${accentColor === c.key ? styles.chipActive : ''}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                  onClick={() => {
+                    setAccentColor(c.key);
+                    applyAccentColor(c.key);
+                  }}
+                >
+                  <span style={{ width: 14, height: 14, borderRadius: '50%', background: c.hex, display: 'inline-block', flexShrink: 0 }} />
+                  {c.label}
+                </button>
+              ))}
+            </div>
+
+            <div className={styles.footer}>
+              <button type="button" className={styles.backBtn} onClick={() => setStep(1)}>{tr.common.back}</button>
+              <button type="button" className="btn btn-primary" onClick={() => setStep(3)}>
+                {tr.common.next}
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Step 3: Interests */}
+        {step === 3 && (
           <>
             <h1 className={styles.stepTitle}>{t.step2_title}</h1>
             <p className={styles.stepDesc}>{t.step2_desc}</p>
@@ -194,16 +232,16 @@ export default function OnboardingPage() {
             <p className={styles.sliderHint}>{t.step2_keywords_hint}</p>
 
             <div className={styles.footer}>
-              <button type="button" className={styles.backBtn} onClick={() => setStep(1)}>{tr.common.back}</button>
-              <button type="button" className="btn btn-primary" disabled={!canNextStep2} onClick={() => setStep(3)}>
+              <button type="button" className={styles.backBtn} onClick={() => setStep(2)}>{tr.common.back}</button>
+              <button type="button" className="btn btn-primary" disabled={!canNextStep2} onClick={() => setStep(4)}>
                 {tr.common.next}
               </button>
             </div>
           </>
         )}
 
-        {/* Step 3: Deep questionnaire -> knowledge base source material */}
-        {step === 3 && (
+        {/* Step 4: Deep questionnaire -> knowledge base source material */}
+        {step === 4 && (
           <>
             <h1 className={styles.stepTitle}>{t.kb_title}</h1>
             <p className={styles.stepDesc}>{t.kb_desc}</p>
@@ -310,14 +348,14 @@ export default function OnboardingPage() {
             </div>
 
             <div className={styles.footer}>
-              <button type="button" className={styles.backBtn} onClick={() => setStep(2)}>{tr.common.back}</button>
-              <button type="button" className="btn btn-primary" onClick={() => setStep(4)}>{tr.common.next}</button>
+              <button type="button" className={styles.backBtn} onClick={() => setStep(3)}>{tr.common.back}</button>
+              <button type="button" className="btn btn-primary" onClick={() => setStep(5)}>{tr.common.next}</button>
             </div>
           </>
         )}
 
-        {/* Step 4: Energy */}
-        {step === 4 && (
+        {/* Step 5: Energy */}
+        {step === 5 && (
           <>
             <h1 className={styles.stepTitle}>{t.step3_title}</h1>
             <p className={styles.stepDesc}>{t.step3_desc}</p>
@@ -335,14 +373,14 @@ export default function OnboardingPage() {
             </div>
 
             <div className={styles.footer}>
-              <button type="button" className={styles.backBtn} onClick={() => setStep(3)}>{tr.common.back}</button>
+              <button type="button" className={styles.backBtn} onClick={() => setStep(4)}>{tr.common.back}</button>
               <button type="button" className="btn btn-primary" onClick={goToKnowledgeBaseStep}>{tr.common.next}</button>
             </div>
           </>
         )}
 
-        {/* Step 5: Knowledge base synthesis + review */}
-        {step === 5 && (
+        {/* Step 6: Knowledge base synthesis + review */}
+        {step === 6 && (
           <>
             {kbLoading ? (
               <div className={styles.buildingWrap}>
@@ -377,16 +415,16 @@ export default function OnboardingPage() {
                 </div>
 
                 <div className={styles.footer}>
-                  <button type="button" className={styles.backBtn} onClick={() => setStep(4)}>{tr.common.back}</button>
-                  <button type="button" className="btn btn-primary" onClick={() => setStep(6)}>{tr.common.next}</button>
+                  <button type="button" className={styles.backBtn} onClick={() => setStep(5)}>{tr.common.back}</button>
+                  <button type="button" className="btn btn-primary" onClick={() => setStep(7)}>{tr.common.next}</button>
                 </div>
               </>
             )}
           </>
         )}
 
-        {/* Step 6: Final */}
-        {step === 6 && (
+        {/* Step 7: Final */}
+        {step === 7 && (
           <>
             <h1 className={styles.stepTitle}>{t.step4_title}</h1>
             <p className={styles.stepDesc}>{t.step4_desc}</p>
@@ -397,7 +435,7 @@ export default function OnboardingPage() {
             </div>
 
             <div className={styles.footer}>
-              <button type="button" className={styles.backBtn} onClick={() => setStep(5)}>{tr.common.back}</button>
+              <button type="button" className={styles.backBtn} onClick={() => setStep(6)}>{tr.common.back}</button>
               <button type="button" className="btn btn-primary btn-lg" disabled={starting} onClick={finish}>
                 {starting ? t.starting : t.start_button}
               </button>

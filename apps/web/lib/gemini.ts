@@ -87,7 +87,8 @@ async function callGemini(prompt: string, maxTokens = 1024, expectJson = false, 
 
 async function callGeminiWithHistory(
   history: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>,
-  maxTokens = 800
+  maxTokens = 800,
+  lang: Lang = 'id'
 ): Promise<string> {
   if (!GEMINI_API_KEY) {
     throw new Error('NO_API_KEY — isi NEXT_PUBLIC_GEMINI_API_KEY di apps/web/.env lalu restart dev server');
@@ -97,6 +98,7 @@ async function callGeminiWithHistory(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION[lang] }] },
       contents: history,
       generationConfig: {
         temperature: 0.85,
@@ -117,7 +119,7 @@ async function callGeminiWithHistory(
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) throw new Error('EMPTY_RESPONSE');
 
-  return text.trim();
+  return stripStrayCJK(text.trim());
 }
 
 function warnMockFallback(feature: string, err: unknown) {
@@ -622,13 +624,14 @@ export interface ChatMessage {
   content: string;
 }
 
-const COMPANION_SYSTEM_PROMPT = `Kamu adalah Pulse, teman curhat yang hangat dan pengertian untuk orang dengan ADHD. Kamu bukan psikolog formal — kamu adalah safe space yang empatik dan suportif.
+const COMPANION_SYSTEM_PROMPT: Record<Lang, string> = {
+  id: `Kamu adalah Pulse, teman curhat yang hangat dan pengertian untuk orang dengan ADHD. Kamu bukan psikolog formal — kamu adalah safe space yang empatik dan suportif.
 
 Karaktermu:
 - Berbicara seperti teman dekat yang benar-benar peduli, pakai "kamu" bukan "Anda"
 - Hangat, sabar, tidak pernah menghakimi
 - Menggunakan bahasa Indonesia santai dan natural
-- Sesekali pakai emoji yang relevan tapi tidak berlebihan 
+- Sesekali pakai emoji yang relevan tapi tidak berlebihan
 - Validasi perasaan dulu sebelum memberi saran
 - Kalau user terlihat burnout/overwhelm: fokus pada comfort dulu, saran belakangan
 - Kalau user minta saran: beri yang konkret dan kecil, mudah dilakukan
@@ -636,7 +639,41 @@ Karaktermu:
 - Tidak pernah dismiss perasaan user
 - Kalau situasi terasa berat banget atau ada tanda krisis: dengan lembut suggest untuk bicara ke profesional
 
-Ingat: Kamu ada di sini untuk mendengar, bukan untuk "fix" orang. Sometimes just being heard is enough.`;
+Ingat: Kamu ada di sini untuk mendengar, bukan untuk "fix" orang. Sometimes just being heard is enough.`,
+  en: `You are Pulse, a warm and understanding companion for people with ADHD. You're not a formal psychologist — you're an empathetic, supportive safe space.
+
+Your character:
+- Talk like a close friend who genuinely cares
+- Warm, patient, never judgmental
+- Use natural, casual English
+- Occasionally use relevant emoji, but don't overdo it
+- Validate feelings first before giving advice
+- If the user seems burnt out/overwhelmed: focus on comfort first, advice later
+- If the user asks for advice: give something concrete and small, easy to do
+- Keep responses short-to-medium (2-4 paragraphs), no need to be long
+- Never dismiss the user's feelings
+- If things feel really heavy or there are signs of crisis: gently suggest talking to a professional
+
+Remember: You're here to listen, not to "fix" people. Sometimes just being heard is enough.`,
+};
+
+const COMPANION_GREETING: Record<Lang, string> = {
+  id: 'Hei! Aku Pulse, teman curhatmu di sini. 💙 Cerita aja, aku dengerin. Lagi gimana hari ini?',
+  en: "Hey! I'm Pulse, your companion here. 💙 Go ahead and talk to me, I'm listening. How's today going?",
+};
+
+const COMPANION_FALLBACKS: Record<Lang, string[]> = {
+  id: [
+    'Hei, aku lagi susah connect sekarang 🌙 Tapi aku dengerin kamu kok. Cerita terus ya, nanti aku respon begitu bisa.',
+    'Koneksi lagi agak lemot nih... Tapi kamu nggak sendirian. Kalau mau curhat, tulis aja dulu — aku bakal baca semuanya. 💙',
+    'Ups, ada gangguan teknis sebentar. Yang penting kamu ingat: perasaan kamu valid, apapun itu. 🌸',
+  ],
+  en: [
+    "Hey, I'm having trouble connecting right now 🌙 But I'm still listening. Keep talking, I'll respond as soon as I can.",
+    "Connection's a bit slow right now... But you're not alone. If you want to talk, just write it out — I'll read all of it. 💙",
+    "Oops, a small technical hiccup. Just remember: your feelings are valid, whatever they are. 🌸",
+  ],
+};
 
 export async function chatWithCompanion(
   messages: ChatMessage[],
@@ -644,22 +681,27 @@ export async function chatWithCompanion(
     avgEnergy?: number;
     rsdEventsCount?: number;
     completedTasksToday?: number;
-  }
+  },
+  lang: Lang = 'id'
 ): Promise<string> {
   const contextNote = userContext
-    ? `\n\n[Context dari app: energi rata-rata ${userContext.avgEnergy?.toFixed(1) ?? '?'}/5, ${userContext.rsdEventsCount ?? 0} episode RSD tercatat, ${userContext.completedTasksToday ?? 0} task selesai hari ini]`
+    ? lang === 'en'
+      ? `\n\n[Context from the app: average energy ${userContext.avgEnergy?.toFixed(1) ?? '?'}/5, ${userContext.rsdEventsCount ?? 0} RSD episodes logged, ${userContext.completedTasksToday ?? 0} tasks completed today]`
+      : `\n\n[Context dari app: energi rata-rata ${userContext.avgEnergy?.toFixed(1) ?? '?'}/5, ${userContext.rsdEventsCount ?? 0} episode RSD tercatat, ${userContext.completedTasksToday ?? 0} task selesai hari ini]`
     : '';
+
+  const startNote = lang === 'en' ? '\n\n---\nStart the conversation now.' : '\n\n---\nMulai percakapan sekarang.';
 
   // Build conversation history for Gemini
   const history: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [
     // Inject system prompt as first user-model exchange
     {
       role: 'user',
-      parts: [{ text: COMPANION_SYSTEM_PROMPT + contextNote + '\n\n---\nMulai percakapan sekarang.' }],
+      parts: [{ text: COMPANION_SYSTEM_PROMPT[lang] + contextNote + startNote }],
     },
     {
       role: 'model',
-      parts: [{ text: 'Hei! Aku Pulse, teman curhatmu di sini. 💙 Cerita aja, aku dengerin. Lagi gimana hari ini?' }],
+      parts: [{ text: COMPANION_GREETING[lang] }],
     },
     ...messages.map((m) => ({
       role: m.role,
@@ -668,15 +710,10 @@ export async function chatWithCompanion(
   ];
 
   try {
-    return await callGeminiWithHistory(history, 600);
+    return await callGeminiWithHistory(history, 600, lang);
   } catch (err) {
     warnMockFallback('chatWithCompanion', err);
-    // Friendly fallback responses
-    const fallbacks = [
-      'Hei, aku lagi susah connect sekarang 🌙 Tapi aku dengerin kamu kok. Cerita terus ya, nanti aku respon begitu bisa.',
-      'Koneksi lagi agak lemot nih... Tapi kamu nggak sendirian. Kalau mau curhat, tulis aja dulu — aku bakal baca semuanya. 💙',
-      'Ups, ada gangguan teknis sebentar. Yang penting kamu ingat: perasaan kamu valid, apapun itu. 🌸',
-    ];
+    const fallbacks = COMPANION_FALLBACKS[lang];
     return fallbacks[Math.floor(Math.random() * fallbacks.length)] as string;
   }
 }

@@ -228,6 +228,17 @@
   }
 }
 
+/* Accent color presets — chosen at onboarding, changeable later from the top
+   bar. Placed after the dark-mode blocks so the chosen accent always wins
+   regardless of light/dark theme (equal-specificity :root selectors resolve
+   by source order). Only --color-primary/-hover/-bg shift; everything else
+   (text, surfaces, shadows) stays governed by the light/dark theme. */
+:root[data-accent="purple"] { --color-primary: #8B5CF6; --color-primary-hover: #7C3AED; --color-primary-bg: rgba(139, 92, 246, 0.12); }
+:root[data-accent="green"]  { --color-primary: #10B981; --color-primary-hover: #059669; --color-primary-bg: rgba(16, 185, 129, 0.12); }
+:root[data-accent="pink"]   { --color-primary: #EC4899; --color-primary-hover: #DB2777; --color-primary-bg: rgba(236, 72, 153, 0.12); }
+:root[data-accent="orange"] { --color-primary: #F97316; --color-primary-hover: #EA580C; --color-primary-bg: rgba(249, 115, 22, 0.12); }
+:root[data-accent="teal"]   { --color-primary: #14B8A6; --color-primary-hover: #0D9488; --color-primary-bg: rgba(20, 184, 166, 0.12); }
+
 /* High contrast mode */
 [data-contrast="high"] {
   --color-text:       #000000;
