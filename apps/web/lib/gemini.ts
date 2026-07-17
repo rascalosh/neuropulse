@@ -1,5 +1,6 @@
 // lib/gemini.ts — Gemini API wrapper with offline fallback
-import type { QuestionnaireAnswers, CommunicationTone } from './storage';
+
+type Lang = 'id' | 'en';
 
 const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 const MODEL = process.env.NEXT_PUBLIC_GEMINI_MODEL || 'gemini-3.1-flash-lite';
@@ -29,12 +30,18 @@ function stripStrayCJK(text: string): string {
   return text.replace(CJK_RANGE, '').replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-const SYSTEM_INSTRUCTION =
-  'Kamu HANYA boleh merespon dalam Bahasa Indonesia (atau Inggris jika diminta eksplisit). ' +
-  'JANGAN PERNAH menghasilkan karakter Mandarin/China, Jepang, Korea, atau aksara non-Latin lainnya, ' +
-  'bahkan sebagai typo atau campuran sebagian kata. Jika ragu, gunakan Bahasa Indonesia biasa.';
+const SYSTEM_INSTRUCTION: Record<Lang, string> = {
+  id:
+    'Kamu HANYA boleh merespon dalam Bahasa Indonesia (atau Inggris jika diminta eksplisit). ' +
+    'JANGAN PERNAH menghasilkan karakter Mandarin/China, Jepang, Korea, atau aksara non-Latin lainnya, ' +
+    'bahkan sebagai typo atau campuran sebagian kata. Jika ragu, gunakan Bahasa Indonesia biasa.',
+  en:
+    'You MUST respond ONLY in English. ' +
+    'NEVER produce Mandarin/Chinese, Japanese, Korean, or other non-Latin script characters, ' +
+    'even as a typo or partial word mix. If unsure, use plain English.',
+};
 
-async function callGemini(prompt: string, maxTokens = 1024, expectJson = false): Promise<string> {
+async function callGemini(prompt: string, maxTokens = 1024, expectJson = false, lang: Lang = 'id'): Promise<string> {
   if (!GEMINI_API_KEY) {
     throw new Error('NO_API_KEY — isi NEXT_PUBLIC_GEMINI_API_KEY di apps/web/.env lalu restart dev server');
   }
@@ -43,7 +50,7 @@ async function callGemini(prompt: string, maxTokens = 1024, expectJson = false):
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+      systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION[lang] }] },
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.8,
@@ -121,7 +128,24 @@ function warnMockFallback(feature: string, err: unknown) {
 // MOCK FALLBACKS (used when no API key or rate limit hit)
 // ============================================================
 
-function mockDecompose(task: string): string {
+function mockDecompose(task: string, lang: Lang): string {
+  if (lang === 'en') {
+    return JSON.stringify({
+      microTasks: [
+        { title: `Open the document and read the brief for "${task.slice(0, 30)}..."`, estimatedMinutes: 5, group: 'Phase 1: Prep', parallel: false },
+        { title: 'Write down the 3 main points to tackle', estimatedMinutes: 5, group: 'Phase 1: Prep', parallel: false },
+        { title: 'Work on the first part (draft/outline)', estimatedMinutes: 10, group: 'Phase 2: Execution', parallel: false },
+        { title: 'Work on the second part', estimatedMinutes: 10, group: 'Phase 2: Execution', parallel: true },
+        { title: 'Review the result and fix anything needed', estimatedMinutes: 5, group: 'Phase 3: Wrap-up', parallel: false },
+        { title: 'Finalize and save your progress', estimatedMinutes: 5, group: 'Phase 3: Wrap-up', parallel: false },
+      ],
+      groups: [
+        { label: 'Phase 1: Prep', type: 'sequential' },
+        { label: 'Phase 2: Execution', type: 'parallel' },
+        { label: 'Phase 3: Wrap-up', type: 'sequential' },
+      ],
+    });
+  }
   return JSON.stringify({
     microTasks: [
       { title: `Buka dokumen dan baca brief "${task.slice(0, 30)}..."`, estimatedMinutes: 5, group: 'Fase 1: Persiapan', parallel: false },
@@ -139,15 +163,26 @@ function mockDecompose(task: string): string {
   });
 }
 
-function mockReframe(task: string, interest: string): string {
-  const maps: Record<string, string[]> = {
+function mockReframe(task: string, interest: string, lang: Lang): string {
+  const mapsId: Record<string, string[]> = {
     anime: ['Quest', 'Arc', 'Skill', 'Boss battle', 'Power-up'],
     game: ['Mission', 'Level', 'Achievement', 'Checkpoint', 'Loot'],
     masak: ['Resep', 'Bahan', 'Langkah memasak', 'Plating', 'Hidangan'],
     musik: ['Intro', 'Verse', 'Chorus', 'Bridge', 'Outro'],
     olahraga: ['Warm-up', 'Set', 'Rep', 'Sprint', 'Cool-down'],
   };
-  const terms = maps[interest.toLowerCase()] || ['Fase', 'Langkah', 'Bagian', 'Sesi', 'Penutup'];
+  const mapsEn: Record<string, string[]> = {
+    anime: ['Quest', 'Arc', 'Skill', 'Boss battle', 'Power-up'],
+    game: ['Mission', 'Level', 'Achievement', 'Checkpoint', 'Loot'],
+    cooking: ['Recipe', 'Ingredients', 'Cooking step', 'Plating', 'Dish'],
+    music: ['Intro', 'Verse', 'Chorus', 'Bridge', 'Outro'],
+    sports: ['Warm-up', 'Set', 'Rep', 'Sprint', 'Cool-down'],
+  };
+  if (lang === 'en') {
+    const terms = mapsEn[interest.toLowerCase()] || ['Phase', 'Step', 'Part', 'Session', 'Wrap-up'];
+    return `[${terms[0]}] Starting task "${task.slice(0, 25)}..." — you're one step closer! 💪`;
+  }
+  const terms = mapsId[interest.toLowerCase()] || ['Fase', 'Langkah', 'Bagian', 'Sesi', 'Penutup'];
   return `[${terms[0]}] Mulai pengerjaan task "${task.slice(0, 25)}..." — kamu sudah selangkah lebih dekat! 💪`;
 }
 
@@ -186,7 +221,14 @@ function mockMoodAnalysis(moodText: string): string {
   });
 }
 
-function mockFrictionBuster(taskTitle: string): string {
+function mockFrictionBuster(taskTitle: string, lang: Lang): string {
+  if (lang === 'en') {
+    return JSON.stringify({
+      type: 'email_draft',
+      title: `First draft for: "${taskTitle.slice(0, 40)}"`,
+      content: `Hi,\n\nI'd like to get started on "${taskTitle}".\n\nHere's the first step I'll take:\n1. [The easiest first step]\n2. [Second step as a follow-up]\n\nI'll share a progress update within the next 24 hours.\n\nBest,\n[Your name]`,
+    });
+  }
   return JSON.stringify({
     type: 'email_draft',
     title: `Draft awal untuk: "${taskTitle.slice(0, 40)}"`,
@@ -212,54 +254,55 @@ export interface DecomposedTask {
   }>;
 }
 
-// Personality context derived from the onboarding knowledge base — passed
-// into task generation so tasking aligns to *how this specific person*
-// works, not just their interests/energy.
-export interface PersonalityContext {
-  recommendedChunkMinutes?: number;
-  recommendedTone?: CommunicationTone;
-  motivationStyle?: string;
-  structureNeedScore?: number; // 0-100, higher = needs more explicit phase structure
-}
-
-const TONE_INSTRUCTION: Record<CommunicationTone, string> = {
-  playful: 'Gunakan bahasa yang playful, ringan, dan penuh semangat seperti mengajak main game.',
-  direct: 'Gunakan bahasa yang singkat, langsung ke inti, tanpa basa-basi berlebihan.',
-  gentle: 'Gunakan bahasa yang lembut, sabar, dan tidak menekan — hindari kata yang terasa seperti tuntutan.',
-};
-
-const MOTIVATION_INSTRUCTION: Record<string, string> = {
-  gamification: 'Framing tiap langkah seperti mendapat poin/achievement kecil.',
-  deadline_pressure: 'Sebutkan estimasi waktu tersisa secara eksplisit di tiap langkah untuk menciptakan urgensi sehat.',
-  social_accountability: 'Framing langkah seolah akan di-share/dilaporkan progressnya ke orang lain.',
-  curiosity: 'Framing langkah sebagai eksplorasi/menjawab rasa penasaran, bukan kewajiban.',
-};
-
 export async function decomposeTasks(
   taskTitle: string,
   interests: string[],
   energyLevel: number,
-  personality?: PersonalityContext
+  lang: Lang = 'id'
 ): Promise<DecomposedTask> {
-  const interestCtx = interests.length > 0 ? `User sangat suka: ${interests.join(', ')}.` : '';
-  const energyCtx = energyLevel <= 2 ? 'Energy user rendah, buat task sesederhana dan sependek mungkin.' : '';
-  const chunkMinutes = personality?.recommendedChunkMinutes ?? 10;
-  const toneCtx = personality?.recommendedTone ? TONE_INSTRUCTION[personality.recommendedTone] : '';
-  const motivationCtx = personality?.motivationStyle ? MOTIVATION_INSTRUCTION[personality.motivationStyle] ?? '' : '';
-  const structureCtx =
-    personality?.structureNeedScore != null && personality.structureNeedScore >= 70
-      ? 'User butuh struktur yang sangat eksplisit — beri lebih banyak fase dan urutan yang jelas.'
-      : '';
+  const prompt =
+    lang === 'en'
+      ? (() => {
+          const interestCtx = interests.length > 0 ? `The user really likes: ${interests.join(', ')}.` : '';
+          const energyCtx = energyLevel <= 2 ? "The user's energy is low, keep the tasks as simple and short as possible." : '';
+          return `You are a productivity assistant for people with ADHD.
+${interestCtx} ${energyCtx}
 
-  const prompt = `Kamu adalah asisten produktivitas untuk orang dengan ADHD, disesuaikan dengan kepribadian dan gaya kerja spesifik user ini.
-${interestCtx} ${energyCtx} ${toneCtx} ${motivationCtx} ${structureCtx}
+Task to break down: "${taskTitle}"
+
+Break this task into 4–6 micro-tasks that:
+- Can each be completed in 2–10 minutes
+- Are very specific (not generic like "start working on it")
+- Use casual, natural English
+- Start with an active verb
+- Are grouped into phases/groups (e.g. Phase 1: Prep, Phase 2: Execution, Phase 3: Wrap-up)
+- Mark which ones can be done in parallel (parallel: true)
+
+Respond ONLY with this JSON format:
+{
+  "microTasks": [
+    { "title": "...", "estimatedMinutes": 5, "group": "Phase 1: Prep", "parallel": false },
+    ...
+  ],
+  "groups": [
+    { "label": "Phase 1: Prep", "type": "sequential" },
+    { "label": "Phase 2: Execution", "type": "parallel" },
+    { "label": "Phase 3: Wrap-up", "type": "sequential" }
+  ]
+}`;
+        })()
+      : (() => {
+          const interestCtx = interests.length > 0 ? `User sangat suka: ${interests.join(', ')}.` : '';
+          const energyCtx = energyLevel <= 2 ? 'Energy user rendah, buat task sesederhana dan sependek mungkin.' : '';
+          return `Kamu adalah asisten produktivitas untuk orang dengan ADHD.
+${interestCtx} ${energyCtx}
 
 Task yang perlu dipecah: "${taskTitle}"
 
 Pecah task ini menjadi 4–6 micro-task yang:
-- Masing-masing bisa diselesaikan dalam ~${Math.max(2, chunkMinutes - 3)}–${chunkMinutes + 3} menit (target sekitar ${chunkMinutes} menit per langkah, sesuai rentang fokus user)
+- Masing-masing bisa diselesaikan dalam 2–10 menit
 - Sangat spesifik (bukan generik seperti "mulai kerjakan")
-- Menggunakan bahasa Indonesia santai, dengan gaya sesuai instruksi tone di atas
+- Menggunakan bahasa Indonesia santai
 - Dimulai dengan kata kerja aktif
 - Dikelompokkan dalam fase/group (misal: Fase 1: Persiapan, Fase 2: Eksekusi, Fase 3: Finalisasi)
 - Tandai mana yang bisa dikerjakan paralel (parallel: true)
@@ -276,25 +319,38 @@ Respond ONLY dengan JSON format ini:
     { "label": "Fase 3: Finalisasi", "type": "sequential" }
   ]
 }`;
+        })();
 
   try {
-    const raw = await callGemini(prompt);
+    const raw = await callGemini(prompt, 1024, false, lang);
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('No JSON found');
     return JSON.parse(jsonMatch[0]) as DecomposedTask;
   } catch {
-    return JSON.parse(mockDecompose(taskTitle)) as DecomposedTask;
+    return JSON.parse(mockDecompose(taskTitle, lang)) as DecomposedTask;
   }
 }
 
 export async function reframeWithInterest(
   microTaskTitle: string,
-  interestKeywords: string[]
+  interestKeywords: string[],
+  lang: Lang = 'id'
 ): Promise<string> {
   if (interestKeywords.length === 0) return microTaskTitle;
 
   const interest = interestKeywords[0];
-  const prompt = `Kamu adalah game master / storyteller kreatif.
+  const prompt =
+    lang === 'en'
+      ? `You are a creative game master / storyteller.
+The user really likes: "${interest}".
+
+Reframe this task sentence into a more engaging version using language/metaphors from ${interest}.
+Original task: "${microTaskTitle}"
+
+Respond ONLY with 1 reframed sentence (no explanation), max 80 characters, in casual English.
+Example for anime: "⚔️ Activate Sharingan — open the document and scope out the terrain"
+Example for game: "🎮 Side quest: check the brief before the main battle begins"`
+      : `Kamu adalah game master / storyteller kreatif.
 User sangat suka: "${interest}".
 
 Reframe kalimat task ini menjadi versi yang lebih menarik menggunakan bahasa/metafora dari ${interest}.
@@ -305,10 +361,10 @@ Contoh untuk anime: "⚔️ Aktifkan Sharingan — buka dokumen dan kenali medan
 Contoh untuk game: "🎮 Side quest: cek brief sebelum battle utama dimulai"`;
 
   try {
-    const raw = await callGemini(prompt);
+    const raw = await callGemini(prompt, 1024, false, lang);
     return raw.replace(/^[\"']|[\"']$/g, '').trim();
   } catch {
-    return mockReframe(microTaskTitle, interest ?? 'anime');
+    return mockReframe(microTaskTitle, interest ?? 'anime', lang);
   }
 }
 
@@ -365,9 +421,33 @@ export interface FrictionBusterResult {
 
 export async function generateFrictionBuster(
   taskTitle: string,
-  microTaskTitle: string
+  microTaskTitle: string,
+  lang: Lang = 'id'
 ): Promise<FrictionBusterResult> {
-  const prompt = `Kamu adalah asisten ADHD yang bisa mengambil alih friction awal sebuah task.
+  const prompt =
+    lang === 'en'
+      ? `You are an ADHD assistant who can take over the initial friction of a task.
+
+The user is completely stuck and can't start this task:
+- Main task: "${taskTitle}"
+- Micro-task they can't start: "${microTaskTitle}"
+
+Pick ONE of the following actions, whichever is most relevant:
+1. Write a first draft email/message (type: "email_draft")
+2. Create an empty template/outline ready to fill in (type: "template")
+3. Find 3 relevant starter references/sources (type: "links")
+4. Create a very detailed first-step outline (type: "outline")
+
+Produce content the user can actually use right away — not instructions, but ACTUAL CONTENT.
+Use English. Maximum 200 words for the content.
+
+Respond ONLY with JSON:
+{
+  "type": "...",
+  "title": "Short title for the generated result",
+  "content": "Ready-to-use content..."
+}`
+      : `Kamu adalah asisten ADHD yang bisa mengambil alih friction awal sebuah task.
 
 User stuck total tidak bisa memulai task ini:
 - Task utama: "${taskTitle}"
@@ -390,12 +470,12 @@ Respond ONLY dengan JSON:
 }`;
 
   try {
-    const raw = await callGemini(prompt, 512);
+    const raw = await callGemini(prompt, 512, false, lang);
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error('No JSON');
     return JSON.parse(jsonMatch[0]) as FrictionBusterResult;
   } catch {
-    return JSON.parse(mockFrictionBuster(taskTitle)) as FrictionBusterResult;
+    return JSON.parse(mockFrictionBuster(taskTitle, lang)) as FrictionBusterResult;
   }
 }
 
@@ -440,63 +520,6 @@ Maksimal 400 kata.`;
       avgEnergy: data.avgEnergy,
       switchCount: data.contextSwitchCount,
     });
-  }
-}
-
-// ============================================================
-// KNOWLEDGE BASE SYNTHESIS (onboarding deep questionnaire)
-// ============================================================
-
-const CHRONOTYPE_LABEL: Record<string, string> = {
-  morning: 'pagi hari',
-  afternoon: 'siang/sore hari',
-  night: 'malam hari',
-  variable: 'jam yang berubah-ubah',
-};
-
-const MOTIVATION_LABEL: Record<string, string> = {
-  gamification: 'gamifikasi (poin, achievement, streak)',
-  deadline_pressure: 'tekanan deadline/urgensi',
-  social_accountability: 'akuntabilitas sosial (dilihat/dilaporkan ke orang lain)',
-  curiosity: 'rasa penasaran/eksplorasi',
-};
-
-function mockKnowledgeBaseSummary(name: string, answers: QuestionnaireAnswers): string {
-  const chronotype = CHRONOTYPE_LABEL[answers.chronotype] ?? answers.chronotype;
-  const motivation = MOTIVATION_LABEL[answers.motivationStyle] ?? answers.motivationStyle;
-  const triggers = answers.procrastinationTriggers.length > 0 ? answers.procrastinationTriggers.join(', ') : 'belum spesifik';
-
-  return `${name} paling fokus di ${chronotype}, dengan rentang atensi sekitar ${answers.focusSpanMinutes} menit sebelum butuh jeda. ` +
-    `Yang paling menghambat mulai bekerja: ${triggers}. Dorongan yang paling cocok untuk ${name} adalah ${motivation}. ` +
-    `${answers.rsdSensitivity >= 4 ? `${name} cukup sensitif terhadap kritik/kegagalan, jadi pendekatan yang lembut dan tanpa tekanan sangat penting.` : `${name} relatif tahan terhadap kritik, jadi framing yang lebih tegas masih bisa diterima.`} ` +
-    `${answers.bodyDoublingHelps ? 'Bekerja bareng orang lain (body doubling) membantu menjaga fokusnya.' : 'Ia cenderung lebih fokus saat bekerja sendiri.'}`;
-}
-
-export async function generateKnowledgeBaseSummary(
-  name: string,
-  answers: QuestionnaireAnswers
-): Promise<string> {
-  const prompt = `Kamu adalah asisten yang menyintesis jawaban kuesioner kepribadian & gaya kerja ADHD menjadi satu ringkasan naratif yang personal — mirip seperti NotebookLM merangkum banyak sumber menjadi satu overview yang koheren.
-
-Nama user: ${name}
-Jawaban kuesioner:
-- Subtipe ADHD (self-report): ${answers.adhdSubtype}
-- Waktu paling fokus: ${answers.chronotype}
-- Rentang fokus sebelum terdistraksi: ${answers.focusSpanMinutes} menit
-- Trigger susah memulai kerja: ${answers.procrastinationTriggers.join(', ') || 'tidak ada yang spesifik'}
-- Gaya motivasi yang paling efektif: ${answers.motivationStyle}
-- Sensitivitas terhadap kritik/kegagalan (RSD), skala 1-5: ${answers.rsdSensitivity}
-- Terbantu dengan body doubling: ${answers.bodyDoublingHelps ? 'ya' : 'tidak'}
-- Preferensi gaya komunikasi AI: ${answers.communicationTone}
-- Sensitivitas sensorik (suara/cahaya berlebih): ${answers.sensorySensitivity}
-
-Tulis 1 paragraf (maksimal 90 kata), bahasa Indonesia, orang ketiga, hangat dan personal, yang merangkum siapa ${name} dalam cara bekerja & butuh dukungan seperti apa. Jangan berikan daftar/bullet, tulis sebagai narasi mengalir.`;
-
-  try {
-    return await callGemini(prompt, 300);
-  } catch (err) {
-    warnMockFallback('generateKnowledgeBaseSummary', err);
-    return mockKnowledgeBaseSummary(name, answers);
   }
 }
 
