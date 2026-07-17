@@ -28,7 +28,6 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/tasks', key: 'tasks', Icon: IconCheckSquare, showTaskBadge: true },
   { href: '/focus-mirror', key: 'focusmirror', Icon: IconEye },
   { href: '/omnifocus', key: 'omnifocus', Icon: IconSparkles },
-  { href: '/leveling', key: 'leveling', Icon: IconStar },
   { href: '/dopamine', key: 'dopamine', Icon: IconGift },
   { href: '/body-double', key: 'bodydouble', Icon: IconMessageCircle },
   { href: '/report', key: 'report', Icon: IconFileText },
