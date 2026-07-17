@@ -34,6 +34,7 @@ export async function updateSession(request: NextRequest) {
   const url = request.nextUrl.clone();
   const isLoginPage = url.pathname === '/login';
   const isAuthCallback = url.pathname === '/auth/callback';
+  const isLandingPage = url.pathname === '/';
 
   // Determine if path is protected
   const isStaticFile =
@@ -43,7 +44,7 @@ export async function updateSession(request: NextRequest) {
     url.pathname.includes('.') ||
     url.pathname.startsWith('/fonts');
 
-  if (!user && !isLoginPage && !isAuthCallback && !isStaticFile) {
+  if (!user && !isLoginPage && !isLandingPage && !isAuthCallback && !isStaticFile) {
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }

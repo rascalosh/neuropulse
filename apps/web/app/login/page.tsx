@@ -3,6 +3,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '../../utils/supabase/client';
 import { useLang } from '../../contexts/providers';
+import { IconMoon, IconSun } from '../../components/Icons';
 import styles from './login.module.css';
 
 const LOGIN_TRANSLATIONS = {
@@ -111,6 +112,22 @@ function LoginContent() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const t = LOGIN_TRANSLATIONS[lang] || LOGIN_TRANSLATIONS.id;
+
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('neuropulse-theme');
+    const initial = saved === 'dark' ? 'dark' : 'light';
+    setTheme(initial);
+    document.documentElement.setAttribute('data-theme', initial);
+  }, []);
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('neuropulse-theme', next);
+  };
 
   // Real-time password criteria verification
   const criteria = {
@@ -246,6 +263,24 @@ function LoginContent() {
             EN
           </button>
         </div>
+        <button
+          type="button"
+          className={styles.themeBtn}
+          onClick={toggleTheme}
+          aria-pressed={theme === 'dark'}
+          aria-label={
+            theme === 'dark'
+              ? lang === 'id' ? 'Ganti ke mode terang' : 'Switch to light mode'
+              : lang === 'id' ? 'Ganti ke mode gelap' : 'Switch to dark mode'
+          }
+          title={
+            theme === 'dark'
+              ? lang === 'id' ? 'Mode terang' : 'Light mode'
+              : lang === 'id' ? 'Mode gelap' : 'Dark mode'
+          }
+        >
+          {theme === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
+        </button>
       </div>
 
       <div className={styles.card}>
