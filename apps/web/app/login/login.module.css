@@ -53,6 +53,30 @@
   top: var(--space-6);
   right: var(--space-6);
   z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.themeBtn {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-sub);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--duration-fast) var(--ease);
+}
+
+.themeBtn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--gray-50);
 }
 
 .langToggle {
