@@ -50,7 +50,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   if (user && isLoginPage) {
-    url.pathname = '/';
+    url.pathname = '/dashboard';
     return NextResponse.redirect(url);
   }
 

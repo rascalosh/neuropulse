@@ -207,7 +207,7 @@ function LoginContent() {
         if (data.session) {
           setSuccessMessage(t.successRegisterDirect);
           setTimeout(() => {
-            router.push('/');
+            router.push('/dashboard');
           }, 1500);
         } else {
           setSuccessMessage(t.successRegisterVerify);
@@ -231,7 +231,7 @@ function LoginContent() {
 
         if (error) throw error;
 
-        router.push('/');
+        router.push('/dashboard');
       }
     } catch (err: any) {
       setErrorMessage(err.message || t.generalError);
