@@ -587,3 +587,33 @@
   to { transform: scale(1); opacity: 1; }
 }
 
+/* XP Progress Bar under Profile in Nav */
+.profileXpBar {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--color-border);
+}
+
+.profileXpInfo {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-xp-text, var(--gray-600));
+  margin-bottom: 5px;
+}
+
+.profileXpTrack {
+  height: 5px;
+  background: var(--color-xp-bg, var(--gray-100));
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.profileXpFill {
+  height: 100%;
+  background: var(--color-xp, var(--color-primary));
+  border-radius: var(--radius-full);
+  transition: width 0.4s var(--ease);
+}
+

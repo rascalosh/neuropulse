@@ -205,6 +205,13 @@ export default function Nav() {
           </div>
 
           <div className={styles.profileRow}>
+            <div className={styles.avatar} aria-label={`${store.profile?.name || 'User'} avatar`}>
+              {store.profile?.avatar || <IconUser size={16} />}
+            </div>
+            <div className={styles.profileInfo}>
+              <div className={styles.profileName}>{store.profile?.name || 'User'}</div>
+              <div className={styles.profileLevel}>{tr.levels[levelInfo.level as keyof typeof tr.levels]}</div>
+            </div>
             <Link
               href="/profile"
               className={styles.profileLink}
@@ -228,6 +235,16 @@ export default function Nav() {
             >
               <IconLogOut size={16} />
             </button>
+          </div>
+
+          <div className={styles.profileXpBar}>
+            <div className={styles.profileXpInfo}>
+              <span>⭐ Lvl {levelInfo.level}</span>
+              <span>{levelInfo.currentXP} XP</span>
+            </div>
+            <div className={styles.profileXpTrack}>
+              <div className={styles.profileXpFill} style={{ width: `${levelInfo.progressPercent}%` }} />
+            </div>
           </div>
         </div>
       </aside>
