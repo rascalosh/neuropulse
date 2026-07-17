@@ -1,4 +1,5 @@
 // lib/gemini.ts — Gemini API wrapper with offline fallback
+import type { QuestionnaireAnswers, CommunicationTone } from './storage';
 
 const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 const MODEL = process.env.NEXT_PUBLIC_GEMINI_MODEL || 'gemini-3.1-flash-lite';
@@ -211,23 +212,54 @@ export interface DecomposedTask {
   }>;
 }
 
+// Personality context derived from the onboarding knowledge base — passed
+// into task generation so tasking aligns to *how this specific person*
+// works, not just their interests/energy.
+export interface PersonalityContext {
+  recommendedChunkMinutes?: number;
+  recommendedTone?: CommunicationTone;
+  motivationStyle?: string;
+  structureNeedScore?: number; // 0-100, higher = needs more explicit phase structure
+}
+
+const TONE_INSTRUCTION: Record<CommunicationTone, string> = {
+  playful: 'Gunakan bahasa yang playful, ringan, dan penuh semangat seperti mengajak main game.',
+  direct: 'Gunakan bahasa yang singkat, langsung ke inti, tanpa basa-basi berlebihan.',
+  gentle: 'Gunakan bahasa yang lembut, sabar, dan tidak menekan — hindari kata yang terasa seperti tuntutan.',
+};
+
+const MOTIVATION_INSTRUCTION: Record<string, string> = {
+  gamification: 'Framing tiap langkah seperti mendapat poin/achievement kecil.',
+  deadline_pressure: 'Sebutkan estimasi waktu tersisa secara eksplisit di tiap langkah untuk menciptakan urgensi sehat.',
+  social_accountability: 'Framing langkah seolah akan di-share/dilaporkan progressnya ke orang lain.',
+  curiosity: 'Framing langkah sebagai eksplorasi/menjawab rasa penasaran, bukan kewajiban.',
+};
+
 export async function decomposeTasks(
   taskTitle: string,
   interests: string[],
-  energyLevel: number
+  energyLevel: number,
+  personality?: PersonalityContext
 ): Promise<DecomposedTask> {
   const interestCtx = interests.length > 0 ? `User sangat suka: ${interests.join(', ')}.` : '';
   const energyCtx = energyLevel <= 2 ? 'Energy user rendah, buat task sesederhana dan sependek mungkin.' : '';
+  const chunkMinutes = personality?.recommendedChunkMinutes ?? 10;
+  const toneCtx = personality?.recommendedTone ? TONE_INSTRUCTION[personality.recommendedTone] : '';
+  const motivationCtx = personality?.motivationStyle ? MOTIVATION_INSTRUCTION[personality.motivationStyle] ?? '' : '';
+  const structureCtx =
+    personality?.structureNeedScore != null && personality.structureNeedScore >= 70
+      ? 'User butuh struktur yang sangat eksplisit — beri lebih banyak fase dan urutan yang jelas.'
+      : '';
 
-  const prompt = `Kamu adalah asisten produktivitas untuk orang dengan ADHD.
-${interestCtx} ${energyCtx}
+  const prompt = `Kamu adalah asisten produktivitas untuk orang dengan ADHD, disesuaikan dengan kepribadian dan gaya kerja spesifik user ini.
+${interestCtx} ${energyCtx} ${toneCtx} ${motivationCtx} ${structureCtx}
 
 Task yang perlu dipecah: "${taskTitle}"
 
 Pecah task ini menjadi 4–6 micro-task yang:
-- Masing-masing bisa diselesaikan dalam 2–10 menit
+- Masing-masing bisa diselesaikan dalam ~${Math.max(2, chunkMinutes - 3)}–${chunkMinutes + 3} menit (target sekitar ${chunkMinutes} menit per langkah, sesuai rentang fokus user)
 - Sangat spesifik (bukan generik seperti "mulai kerjakan")
-- Menggunakan bahasa Indonesia santai
+- Menggunakan bahasa Indonesia santai, dengan gaya sesuai instruksi tone di atas
 - Dimulai dengan kata kerja aktif
 - Dikelompokkan dalam fase/group (misal: Fase 1: Persiapan, Fase 2: Eksekusi, Fase 3: Finalisasi)
 - Tandai mana yang bisa dikerjakan paralel (parallel: true)
@@ -408,6 +440,63 @@ Maksimal 400 kata.`;
       avgEnergy: data.avgEnergy,
       switchCount: data.contextSwitchCount,
     });
+  }
+}
+
+// ============================================================
+// KNOWLEDGE BASE SYNTHESIS (onboarding deep questionnaire)
+// ============================================================
+
+const CHRONOTYPE_LABEL: Record<string, string> = {
+  morning: 'pagi hari',
+  afternoon: 'siang/sore hari',
+  night: 'malam hari',
+  variable: 'jam yang berubah-ubah',
+};
+
+const MOTIVATION_LABEL: Record<string, string> = {
+  gamification: 'gamifikasi (poin, achievement, streak)',
+  deadline_pressure: 'tekanan deadline/urgensi',
+  social_accountability: 'akuntabilitas sosial (dilihat/dilaporkan ke orang lain)',
+  curiosity: 'rasa penasaran/eksplorasi',
+};
+
+function mockKnowledgeBaseSummary(name: string, answers: QuestionnaireAnswers): string {
+  const chronotype = CHRONOTYPE_LABEL[answers.chronotype] ?? answers.chronotype;
+  const motivation = MOTIVATION_LABEL[answers.motivationStyle] ?? answers.motivationStyle;
+  const triggers = answers.procrastinationTriggers.length > 0 ? answers.procrastinationTriggers.join(', ') : 'belum spesifik';
+
+  return `${name} paling fokus di ${chronotype}, dengan rentang atensi sekitar ${answers.focusSpanMinutes} menit sebelum butuh jeda. ` +
+    `Yang paling menghambat mulai bekerja: ${triggers}. Dorongan yang paling cocok untuk ${name} adalah ${motivation}. ` +
+    `${answers.rsdSensitivity >= 4 ? `${name} cukup sensitif terhadap kritik/kegagalan, jadi pendekatan yang lembut dan tanpa tekanan sangat penting.` : `${name} relatif tahan terhadap kritik, jadi framing yang lebih tegas masih bisa diterima.`} ` +
+    `${answers.bodyDoublingHelps ? 'Bekerja bareng orang lain (body doubling) membantu menjaga fokusnya.' : 'Ia cenderung lebih fokus saat bekerja sendiri.'}`;
+}
+
+export async function generateKnowledgeBaseSummary(
+  name: string,
+  answers: QuestionnaireAnswers
+): Promise<string> {
+  const prompt = `Kamu adalah asisten yang menyintesis jawaban kuesioner kepribadian & gaya kerja ADHD menjadi satu ringkasan naratif yang personal — mirip seperti NotebookLM merangkum banyak sumber menjadi satu overview yang koheren.
+
+Nama user: ${name}
+Jawaban kuesioner:
+- Subtipe ADHD (self-report): ${answers.adhdSubtype}
+- Waktu paling fokus: ${answers.chronotype}
+- Rentang fokus sebelum terdistraksi: ${answers.focusSpanMinutes} menit
+- Trigger susah memulai kerja: ${answers.procrastinationTriggers.join(', ') || 'tidak ada yang spesifik'}
+- Gaya motivasi yang paling efektif: ${answers.motivationStyle}
+- Sensitivitas terhadap kritik/kegagalan (RSD), skala 1-5: ${answers.rsdSensitivity}
+- Terbantu dengan body doubling: ${answers.bodyDoublingHelps ? 'ya' : 'tidak'}
+- Preferensi gaya komunikasi AI: ${answers.communicationTone}
+- Sensitivitas sensorik (suara/cahaya berlebih): ${answers.sensorySensitivity}
+
+Tulis 1 paragraf (maksimal 90 kata), bahasa Indonesia, orang ketiga, hangat dan personal, yang merangkum siapa ${name} dalam cara bekerja & butuh dukungan seperti apa. Jangan berikan daftar/bullet, tulis sebagai narasi mengalir.`;
+
+  try {
+    return await callGemini(prompt, 300);
+  } catch (err) {
+    warnMockFallback('generateKnowledgeBaseSummary', err);
+    return mockKnowledgeBaseSummary(name, answers);
   }
 }
 

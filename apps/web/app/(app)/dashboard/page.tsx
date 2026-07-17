@@ -416,6 +416,32 @@ export default function DashboardPage() {
             </div>
             <IconArrowRight size={16} style={{ marginLeft: 'auto', color: 'var(--color-text-muted)' }} />
           </Link>
+
+          {/* Knowledge Base — personality profile derived from onboarding questionnaire */}
+          {store.profile?.knowledgeBase && (
+            <div className={styles.statsRow} style={{ marginTop: 12 }}>
+              <div className={styles.streakCard} style={{ gridColumn: '1 / -1', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+                <div className={styles.streakLeft}>
+                  <span className={styles.streakIcon}>🧩</span>
+                  <div>
+                    <div className={styles.streakValue}>{lang === 'id' ? 'Knowledge Base Kamu' : 'Your Knowledge Base'}</div>
+                    <div className={styles.streakLabel} style={{ maxWidth: 460 }}>{store.profile.knowledgeBase.summary}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', paddingLeft: 44 }}>
+                  <span className={styles.statLabel}>
+                    {lang === 'id' ? 'Stamina fokus' : 'Focus stamina'}: <strong>{store.profile.knowledgeBase.focusStaminaScore}/100</strong>
+                  </span>
+                  <span className={styles.statLabel}>
+                    {lang === 'id' ? 'Sensitivitas RSD' : 'RSD sensitivity'}: <strong>{store.profile.knowledgeBase.rsdRiskScore}/100</strong>
+                  </span>
+                  <span className={styles.statLabel}>
+                    {lang === 'id' ? 'Langkah task' : 'Task step size'}: <strong>{store.profile.knowledgeBase.recommendedChunkMinutes}m</strong>
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

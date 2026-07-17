@@ -2,6 +2,44 @@
 
 export type Interest = string;
 
+export type Chronotype = 'morning' | 'afternoon' | 'night' | 'variable';
+export type MotivationStyle = 'gamification' | 'deadline_pressure' | 'social_accountability' | 'curiosity';
+export type CommunicationTone = 'playful' | 'direct' | 'gentle';
+export type SensorySensitivity = 'low' | 'medium' | 'high';
+export type ADHDSubtype = 'inattentive' | 'hyperactive' | 'combined' | 'unsure';
+
+// Raw answers captured from the deep questionnaire (step 3 of onboarding).
+// This is the "source material" NeuroPulse synthesizes into a knowledge base,
+// similar to how NotebookLM turns raw sources into a study guide.
+export interface QuestionnaireAnswers {
+  adhdSubtype: ADHDSubtype;
+  chronotype: Chronotype;
+  focusSpanMinutes: number; // self-reported, 5-90
+  procrastinationTriggers: string[]; // multi-select
+  motivationStyle: MotivationStyle;
+  rsdSensitivity: number; // 1-5 slider, reaction to criticism
+  bodyDoublingHelps: boolean;
+  communicationTone: CommunicationTone;
+  sensorySensitivity: SensorySensitivity;
+}
+
+// Synthesized personality profile used to align tasking/dashboard to the
+// individual — derived (not random) from QuestionnaireAnswers so the
+// quantitative fields stay consistent with what the user actually answered.
+export interface PersonalityKnowledgeBase {
+  answers: QuestionnaireAnswers;
+  // Derived quantitative metrics (0-100), computed from answers — used to
+  // scale task chunk size, decay sensitivity, and check-in cadence.
+  focusStaminaScore: number; // from focusSpanMinutes
+  rsdRiskScore: number; // from rsdSensitivity
+  structureNeedScore: number; // from adhdSubtype + procrastinationTriggers
+  // Recommended defaults derived from the above, consumed by task decompose.
+  recommendedChunkMinutes: number;
+  recommendedTone: CommunicationTone;
+  summary: string; // AI (or mock) generated narrative overview
+  generatedAt: string;
+}
+
 export interface UserProfile {
   name: string;
   avatar: string; // emoji
@@ -9,6 +47,7 @@ export interface UserProfile {
   interestKeywords: string[]; // specific keywords e.g. "Naruto", "Masterchef"
   onboardingCompleted: boolean;
   createdAt: string;
+  knowledgeBase?: PersonalityKnowledgeBase;
 }
 
 export interface MicroTask {
@@ -268,6 +307,37 @@ export function seedDemoData(): void {
 
 export function genId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+}
+
+// Deterministically derive quantitative KB metrics from raw questionnaire
+// answers. No randomness — same answers always produce the same scores, so
+// the "dummy" numbers stay traceable back to what the user actually said.
+export function deriveKnowledgeBaseMetrics(answers: QuestionnaireAnswers): Pick<
+  PersonalityKnowledgeBase,
+  'focusStaminaScore' | 'rsdRiskScore' | 'structureNeedScore' | 'recommendedChunkMinutes' | 'recommendedTone'
+> {
+  const focusStaminaScore = Math.round(Math.min(100, (answers.focusSpanMinutes / 60) * 100));
+  const rsdRiskScore = Math.round((answers.rsdSensitivity / 5) * 100);
+
+  const subtypeStructureBase: Record<ADHDSubtype, number> = {
+    inattentive: 70,
+    hyperactive: 55,
+    combined: 80,
+    unsure: 60,
+  };
+  const structureNeedScore = Math.min(
+    100,
+    subtypeStructureBase[answers.adhdSubtype] + answers.procrastinationTriggers.length * 5
+  );
+
+  // Chunk size scales with focus stamina: low stamina -> tiny 3-5 min steps,
+  // high stamina -> up to ~15 min steps.
+  const recommendedChunkMinutes = Math.max(3, Math.min(15, Math.round(3 + (focusStaminaScore / 100) * 12)));
+
+  const recommendedTone: CommunicationTone =
+    rsdRiskScore >= 60 ? 'gentle' : answers.communicationTone;
+
+  return { focusStaminaScore, rsdRiskScore, structureNeedScore, recommendedChunkMinutes, recommendedTone };
 }
 
 // Task decay: a task is "decaying" if viewed >5 times with 0 completions
