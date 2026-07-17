@@ -1,4 +1,5 @@
 // lib/gemini.ts — Gemini API wrapper with offline fallback
+import type { QuestionnaireAnswers } from './storage';
 
 type Lang = 'id' | 'en';
 
@@ -520,6 +521,95 @@ Maksimal 400 kata.`;
       avgEnergy: data.avgEnergy,
       switchCount: data.contextSwitchCount,
     });
+  }
+}
+
+// ============================================================
+// KNOWLEDGE BASE SYNTHESIS (onboarding deep questionnaire)
+// ============================================================
+
+const CHRONOTYPE_LABEL: Record<Lang, Record<string, string>> = {
+  id: { morning: 'pagi hari', afternoon: 'siang/sore hari', night: 'malam hari', variable: 'jam yang berubah-ubah' },
+  en: { morning: 'the morning', afternoon: 'the afternoon', night: 'the night', variable: 'varying hours' },
+};
+
+const MOTIVATION_LABEL: Record<Lang, Record<string, string>> = {
+  id: {
+    gamification: 'gamifikasi (poin, achievement, streak)',
+    deadline_pressure: 'tekanan deadline/urgensi',
+    social_accountability: 'akuntabilitas sosial (dilihat/dilaporkan ke orang lain)',
+    curiosity: 'rasa penasaran/eksplorasi',
+  },
+  en: {
+    gamification: 'gamification (points, achievements, streaks)',
+    deadline_pressure: 'deadline/urgency pressure',
+    social_accountability: 'social accountability (being seen/reporting to someone)',
+    curiosity: 'curiosity/exploration',
+  },
+};
+
+function mockKnowledgeBaseSummary(name: string, answers: QuestionnaireAnswers, lang: Lang): string {
+  const chronotype = CHRONOTYPE_LABEL[lang][answers.chronotype] ?? answers.chronotype;
+  const motivation = MOTIVATION_LABEL[lang][answers.motivationStyle] ?? answers.motivationStyle;
+
+  if (lang === 'en') {
+    const triggers = answers.procrastinationTriggers.length > 0 ? answers.procrastinationTriggers.join(', ') : 'nothing specific';
+    return `${name} focuses best during ${chronotype}, with an attention span of about ${answers.focusSpanMinutes} minutes before needing a break. ` +
+      `What most often blocks getting started: ${triggers}. The push that works best for ${name} is ${motivation}. ` +
+      `${answers.rsdSensitivity >= 4 ? `${name} is fairly sensitive to criticism/failure, so a gentle, low-pressure approach matters a lot.` : `${name} handles criticism relatively well, so a more direct framing still works.`} ` +
+      `${answers.bodyDoublingHelps ? 'Working alongside someone else (body doubling) helps keep focus.' : 'They tend to focus better working alone.'}`;
+  }
+
+  const triggers = answers.procrastinationTriggers.length > 0 ? answers.procrastinationTriggers.join(', ') : 'belum spesifik';
+  return `${name} paling fokus di ${chronotype}, dengan rentang atensi sekitar ${answers.focusSpanMinutes} menit sebelum butuh jeda. ` +
+    `Yang paling menghambat mulai bekerja: ${triggers}. Dorongan yang paling cocok untuk ${name} adalah ${motivation}. ` +
+    `${answers.rsdSensitivity >= 4 ? `${name} cukup sensitif terhadap kritik/kegagalan, jadi pendekatan yang lembut dan tanpa tekanan sangat penting.` : `${name} relatif tahan terhadap kritik, jadi framing yang lebih tegas masih bisa diterima.`} ` +
+    `${answers.bodyDoublingHelps ? 'Bekerja bareng orang lain (body doubling) membantu menjaga fokusnya.' : 'Ia cenderung lebih fokus saat bekerja sendiri.'}`;
+}
+
+export async function generateKnowledgeBaseSummary(
+  name: string,
+  answers: QuestionnaireAnswers,
+  lang: Lang = 'id'
+): Promise<string> {
+  const prompt =
+    lang === 'en'
+      ? `You synthesize answers from an ADHD personality/work-style questionnaire into one personal narrative summary — like NotebookLM condensing many sources into one coherent overview.
+
+User's name: ${name}
+Questionnaire answers:
+- ADHD subtype (self-report): ${answers.adhdSubtype}
+- Best focus time: ${answers.chronotype}
+- Attention span before getting distracted: ${answers.focusSpanMinutes} minutes
+- Triggers that make starting hard: ${answers.procrastinationTriggers.join(', ') || 'nothing specific'}
+- Most effective motivation style: ${answers.motivationStyle}
+- Sensitivity to criticism/failure (RSD), scale 1-5: ${answers.rsdSensitivity}
+- Helped by body doubling: ${answers.bodyDoublingHelps ? 'yes' : 'no'}
+- Preferred AI communication tone: ${answers.communicationTone}
+- Sensory sensitivity (loud noise/bright light): ${answers.sensorySensitivity}
+
+Write 1 paragraph (max 90 words), English, third person, warm and personal, summarizing who ${name} is in how they work and what support they need. No lists/bullets, write it as flowing narrative.`
+      : `Kamu adalah asisten yang menyintesis jawaban kuesioner kepribadian & gaya kerja ADHD menjadi satu ringkasan naratif yang personal — mirip seperti NotebookLM merangkum banyak sumber menjadi satu overview yang koheren.
+
+Nama user: ${name}
+Jawaban kuesioner:
+- Subtipe ADHD (self-report): ${answers.adhdSubtype}
+- Waktu paling fokus: ${answers.chronotype}
+- Rentang fokus sebelum terdistraksi: ${answers.focusSpanMinutes} menit
+- Trigger susah memulai kerja: ${answers.procrastinationTriggers.join(', ') || 'tidak ada yang spesifik'}
+- Gaya motivasi yang paling efektif: ${answers.motivationStyle}
+- Sensitivitas terhadap kritik/kegagalan (RSD), skala 1-5: ${answers.rsdSensitivity}
+- Terbantu dengan body doubling: ${answers.bodyDoublingHelps ? 'ya' : 'tidak'}
+- Preferensi gaya komunikasi AI: ${answers.communicationTone}
+- Sensitivitas sensorik (suara/cahaya berlebih): ${answers.sensorySensitivity}
+
+Tulis 1 paragraf (maksimal 90 kata), bahasa Indonesia, orang ketiga, hangat dan personal, yang merangkum siapa ${name} dalam cara bekerja & butuh dukungan seperti apa. Jangan berikan daftar/bullet, tulis sebagai narasi mengalir.`;
+
+  try {
+    return await callGemini(prompt, 300, false, lang);
+  } catch (err) {
+    warnMockFallback('generateKnowledgeBaseSummary', err);
+    return mockKnowledgeBaseSummary(name, answers, lang);
   }
 }
 
