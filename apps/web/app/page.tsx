@@ -2,10 +2,10 @@
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { getStore } from '../lib/storage';
 import { getMascotSrc } from '../lib/mascot';
 import { createClient } from '../utils/supabase/client';
+import type { User } from '@supabase/supabase-js';
 import { useLang } from '../contexts/providers';
 import { translations } from '../lib/i18n';
 import {
@@ -114,12 +114,15 @@ const FEATURE_ICONS = [
 const PRINCIPLE_TINTS = [styles.tintAmber, styles.tintGreen, styles.tintPurple];
 
 export default function LandingPage() {
-  const router = useRouter();
   const { lang, setLang } = useLang();
   const t = COPY[lang];
   const tr = translations[lang];
   const [energy, setEnergy] = useState(3);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  const [user, setUser] = useState<User | null>(null);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // Same key + light-first default as the in-app TopBar toggle, so the
   // preference carries over between the landing page and the app
@@ -137,27 +140,31 @@ export default function LandingPage() {
     localStorage.setItem('neuropulse-theme', next);
   };
 
-  // Returning users skip the landing: onboarded → dashboard,
-  // signed-in but not yet onboarded → onboarding. Guests stay here.
+  // Check login and onboarding completion status
   useEffect(() => {
-    if (getStore().profile?.onboardingCompleted) {
-      router.replace('/dashboard');
-      return;
-    }
+    const store = getStore();
+    setOnboardingCompleted(!!store.profile?.onboardingCompleted);
+
     let cancelled = false;
     (async () => {
       try {
         const supabase = createClient();
         const { data } = await supabase.auth.getUser();
-        if (!cancelled && data.user) router.replace('/onboarding');
+        if (!cancelled) {
+          setUser(data.user);
+        }
       } catch {
         // Supabase unavailable / not signed in — show the landing page
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, []);
 
   const energyInfo = tr.energy[String(energy) as keyof typeof tr.energy];
 
@@ -207,10 +214,21 @@ export default function LandingPage() {
             >
               {theme === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
             </button>
-            <Link href="/login" className={styles.loginLink}>{t.login}</Link>
-            <Link href="/onboarding" className={`${styles.btnPrimary} ${styles.btnSm}`}>
-              {t.navCta}
-            </Link>
+            {!loading && user ? (
+              <Link
+                href={onboardingCompleted ? '/dashboard' : '/onboarding'}
+                className={`${styles.btnPrimary} ${styles.btnSm}`}
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link href="/login" className={styles.loginLink}>{t.login}</Link>
+                <Link href="/onboarding" className={`${styles.btnPrimary} ${styles.btnSm}`}>
+                  {t.navCta}
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -227,10 +245,21 @@ export default function LandingPage() {
             </h1>
             <p className={styles.heroSub}>{t.sub}</p>
             <div className={styles.ctaRow}>
-              <Link href="/onboarding" className={styles.btnPrimary}>
-                {t.ctaPrimary} <IconArrowRight size={18} />
-              </Link>
-              <Link href="/login" className={styles.btnSecondary}>{t.ctaSecondary}</Link>
+              {!loading && user ? (
+                <Link
+                  href={onboardingCompleted ? '/dashboard' : '/onboarding'}
+                  className={styles.btnPrimary}
+                >
+                  {lang === 'id' ? 'Ke Dashboard' : 'Go to Dashboard'} <IconArrowRight size={18} />
+                </Link>
+              ) : (
+                <>
+                  <Link href="/onboarding" className={styles.btnPrimary}>
+                    {t.ctaPrimary} <IconArrowRight size={18} />
+                  </Link>
+                  <Link href="/login" className={styles.btnSecondary}>{t.ctaSecondary}</Link>
+                </>
+              )}
             </div>
             <div className={styles.trustRow}>
               {t.trust.map((item) => (
@@ -363,9 +392,18 @@ export default function LandingPage() {
             />
             <h2 id="cta-title" className={styles.ctaTitle}>{t.ctaTitle}</h2>
             <p className={styles.ctaDesc}>{t.ctaDesc}</p>
-            <Link href="/onboarding" className={styles.ctaBtn}>
-              {t.ctaBtn} <IconArrowRight size={18} />
-            </Link>
+            {!loading && user ? (
+              <Link
+                href={onboardingCompleted ? '/dashboard' : '/onboarding'}
+                className={styles.ctaBtn}
+              >
+                {lang === 'id' ? 'Ke Dashboard' : 'Go to Dashboard'} <IconArrowRight size={18} />
+              </Link>
+            ) : (
+              <Link href="/onboarding" className={styles.ctaBtn}>
+                {t.ctaBtn} <IconArrowRight size={18} />
+              </Link>
+            )}
             <span className={styles.ctaHint}>{t.ctaHint}</span>
           </div>
         </section>
