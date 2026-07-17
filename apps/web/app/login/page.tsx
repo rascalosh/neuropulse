@@ -3,7 +3,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '../../utils/supabase/client';
 import { useLang } from '../../contexts/providers';
-import { IconMoon, IconSun } from '../../components/Icons';
+import { IconMoon, IconSun, IconArrowLeft } from '../../components/Icons';
 import styles from './login.module.css';
 
 const LOGIN_TRANSLATIONS = {
@@ -243,6 +243,13 @@ function LoginContent() {
     <div className={styles.container}>
       <div className={styles.glowBlob1} aria-hidden="true" />
       <div className={styles.glowBlob2} aria-hidden="true" />
+
+      <div className={styles.backWrapper}>
+        <button type="button" className={styles.backBtn} onClick={() => router.push('/')}>
+          <IconArrowLeft size={15} />
+          {lang === 'id' ? 'Beranda' : 'Home'}
+        </button>
+      </div>
 
       <div className={styles.langWrapper}>
         <div className={styles.langToggle} role="group" aria-label="Language switcher">

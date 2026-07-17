@@ -9,7 +9,7 @@ import type { User } from '@supabase/supabase-js';
 import { useLang } from '../contexts/providers';
 import { translations } from '../lib/i18n';
 import {
-  IconHeart, IconArrowRight, IconCheckSquare, IconGift,
+  IconArrowRight, IconCheckSquare, IconGift,
   IconEye, IconMessageCircle, IconZap, IconFileText,
   IconMoon, IconSun,
 } from '../components/Icons';
@@ -174,7 +174,10 @@ export default function LandingPage() {
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <Link href="/" className={styles.brand} aria-label="NeuroPulse">
-            <span className={styles.brandIcon} aria-hidden="true"><IconHeart size={18} /></span>
+            <span className={styles.brandIcon} aria-hidden="true">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.svg" alt="" className={styles.brandLogo} />
+            </span>
             <span className={styles.brandName}>NeuroPulse</span>
           </Link>
           <div className={styles.headerRight}>
@@ -278,11 +281,11 @@ export default function LandingPage() {
             <span className={`${styles.sparkle} ${styles.sparkleA}`} aria-hidden="true">✨</span>
             <span className={`${styles.sparkle} ${styles.sparkleB}`} aria-hidden="true">✨</span>
             <img
-              src="/mascot-buddy.png"
+              src="/brainlandingpage.png"
               alt={t.heroAlt}
               className={styles.mascotHero}
-              width={1128}
-              height={1296}
+              width={575}
+              height={567}
             />
           </div>
         </section>
@@ -412,7 +415,10 @@ export default function LandingPage() {
       {/* ── Footer ── */}
       <footer className={styles.footer}>
         <div className={styles.footerBrand}>
-          <span className={styles.brandIcon} aria-hidden="true"><IconHeart size={16} /></span>
+          <span className={styles.brandIcon} aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="" className={styles.brandLogo} />
+          </span>
           NeuroPulse
         </div>
         <p className={styles.footerText}>{t.footerText}</p>

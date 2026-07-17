@@ -7,6 +7,7 @@ export type MotivationStyle = 'gamification' | 'deadline_pressure' | 'social_acc
 export type CommunicationTone = 'playful' | 'direct' | 'gentle';
 export type SensorySensitivity = 'low' | 'medium' | 'high';
 export type ADHDSubtype = 'inattentive' | 'hyperactive' | 'combined' | 'unsure';
+export type AccentColor = 'blue' | 'purple' | 'green' | 'pink' | 'orange' | 'teal';
 
 // Raw answers captured from the deep questionnaire (step 3 of onboarding).
 // This is the "source material" NeuroPulse synthesizes into a knowledge base,
@@ -48,6 +49,7 @@ export interface UserProfile {
   onboardingCompleted: boolean;
   createdAt: string;
   knowledgeBase?: PersonalityKnowledgeBase;
+  accentColor?: AccentColor;
 }
 
 export interface MicroTask {

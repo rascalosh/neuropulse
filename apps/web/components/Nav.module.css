@@ -344,6 +344,23 @@
   gap: 10px;
 }
 
+.profileLink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  padding: 4px;
+  margin: -4px;
+  transition: background var(--duration-fast) var(--ease);
+}
+
+.profileLink:hover {
+  background: var(--gray-50);
+}
+
 .profileName {
   font-size: 13px;
   font-weight: 600;

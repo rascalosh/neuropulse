@@ -124,6 +124,14 @@ export function IconArrowRight({ size, ...p }: IconProps) {
   );
 }
 
+export function IconArrowLeft({ size, ...p }: IconProps) {
+  return (
+    <svg {...base(size)} {...p}>
+      <path d="M19 12H5M11 18l-6-6 6-6" />
+    </svg>
+  );
+}
+
 export function IconUser({ size, ...p }: IconProps) {
   return (
     <svg {...base(size)} {...p}>
