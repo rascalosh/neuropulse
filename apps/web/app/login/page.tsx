@@ -292,7 +292,10 @@ function LoginContent() {
 
       <div className={styles.card}>
         <div className={styles.logoSection}>
-          <div className={styles.logoBadge} aria-hidden="true">🧠</div>
+          <div className={styles.logoBadge} aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.svg" alt="" className={styles.logoImg} />
+          </div>
           <h1 className={styles.brandTitle}>NeuroPulse</h1>
         </div>
 
