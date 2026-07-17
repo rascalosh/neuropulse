@@ -27,6 +27,8 @@
     "packages/*"
   ],
   "dependencies": {
+    "@supabase/ssr": "^0.12.3",
+    "@supabase/supabase-js": "^2.110.7",
     "framer-motion": "^12.42.2"
   }
 }

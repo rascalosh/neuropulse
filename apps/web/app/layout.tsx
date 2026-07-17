@@ -17,18 +17,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                const saved = localStorage.getItem('neuropulse-theme');
-                const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                const theme = saved || (systemDark ? 'dark' : 'light');
-                document.documentElement.setAttribute('data-theme', theme);
-              } catch (e) {}
-            `,
-          }}
-        />
       </head>
       <body suppressHydrationWarning={true}>
         <a href="#main-content" className="skip-link">Skip to main content</a>
