@@ -153,6 +153,29 @@ export default function OmniFocusReader() {
   const [bionicEnabled, setBionicEnabled] = useState(true);
   const [fontSize, setFontSize] = useState(16);
   const [isCleaning, setIsCleaning] = useState(false);
+  const [bionicQuotaMsg, setBionicQuotaMsg] = useState<string | null>(null);
+
+  // Same monthly quota as the global accessibility bionic toggle
+  // (see contexts/providers.tsx) — this reader is the actual "Bionic
+  // Reading" feature being tier-gated, so it checks the same server RPC.
+  const handleToggleBionic = async () => {
+    if (bionicEnabled) {
+      setBionicEnabled(false);
+      return;
+    }
+    try {
+      const res = await fetch('/api/bionic/check', { method: 'POST' });
+      const data = await res.json();
+      if (!data.allowed) {
+        setBionicQuotaMsg(`Kuota bulan ini (${data.limit}x, paket ${data.tier}) habis. Upgrade untuk lanjut pakai Bionic Reading.`);
+        return;
+      }
+      setBionicQuotaMsg(null);
+      setBionicEnabled(true);
+    } catch {
+      setBionicEnabled(true); // offline — fail open
+    }
+  };
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const ttsRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -451,7 +474,7 @@ export default function OmniFocusReader() {
                   {/* Bionic toggle */}
                   <button
                     className={`omni-tool-btn omni-tool-toggle ${bionicEnabled ? 'active' : ''}`}
-                    onClick={() => setBionicEnabled((v) => !v)}
+                    onClick={handleToggleBionic}
                     title="Toggle Bionic Reading"
                   >
                     <span style={{ fontWeight: 900, fontSize: '13px' }}>
@@ -459,6 +482,13 @@ export default function OmniFocusReader() {
                     </span>
                   </button>
                 </div>
+
+                {bionicQuotaMsg && (
+                  <p style={{ width: '100%', fontSize: 12, fontWeight: 600, color: '#92400E', marginTop: 6 }}>
+                    {bionicQuotaMsg}{' '}
+                    <a href="/pricing" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>Upgrade</a>
+                  </p>
+                )}
 
                 {/* Right: actions */}
                 <div className="omni-toolbar-right">

@@ -10,7 +10,8 @@ import { translations } from '../lib/i18n';
 import {
   IconGrid, IconCheckSquare, IconGift, IconHeart,
   IconFileText, IconMenu, IconFlame, IconUser,
-  IconMessageCircle, IconEye, IconSparkles, IconLogOut,
+  IconMessageCircle, IconEye, IconSparkles, IconLogOut, IconStar,
+  IconArrowRight,
 } from './Icons';
 import styles from './Nav.module.css';
 
@@ -27,6 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/tasks', key: 'tasks', Icon: IconCheckSquare, showTaskBadge: true },
   { href: '/focus-mirror', key: 'focusmirror', Icon: IconEye },
   { href: '/omnifocus', key: 'omnifocus', Icon: IconSparkles },
+  { href: '/leveling', key: 'leveling', Icon: IconStar },
   { href: '/dopamine', key: 'dopamine', Icon: IconGift },
   { href: '/body-double', key: 'bodydouble', Icon: IconMessageCircle },
   { href: '/report', key: 'report', Icon: IconFileText },
@@ -35,7 +37,7 @@ const NAV_ITEMS: NavItem[] = [
 export default function Nav() {
   const pathname = usePathname();
   const [store] = useStorage();
-  const { lang, setLang } = useLang();
+  const { lang } = useLang();
   const [mounted, setMounted] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -184,53 +186,13 @@ export default function Nav() {
             </div>
           </div>
 
-          {/* Language toggle */}
-          <div className={styles.langToggle} role="group" aria-label="Language switcher">
-            <button
-              className={`${styles.langBtn} ${lang === 'id' ? styles.langActive : ''}`}
-              onClick={() => setLang('id')}
-              aria-pressed={lang === 'id'}
-              lang="id"
-            >
-              ID
-            </button>
-            <button
-              className={`${styles.langBtn} ${lang === 'en' ? styles.langActive : ''}`}
-              onClick={() => setLang('en')}
-              aria-pressed={lang === 'en'}
-              lang="en"
-            >
-              EN
-            </button>
-          </div>
+          <Link href="/pricing" className={styles.upgradeBtn} aria-label={lang === 'id' ? 'Upgrade paket' : 'Upgrade plan'}>
+            <IconStar size={13} />
+            {lang === 'id' ? 'Upgrade' : 'Upgrade'}
+            <IconArrowRight size={12} className={styles.upgradeBtnArrow} />
+          </Link>
 
-          <div className={styles.profileRow}>
-            <Link
-              href="/profile"
-              className={styles.profileLink}
-              aria-label={lang === 'id' ? 'Edit profil' : 'Edit profile'}
-              title={lang === 'id' ? 'Edit profil' : 'Edit profile'}
-            >
-              <div className={styles.avatar} aria-hidden="true">
-                {store.profile?.avatar || <IconUser size={16} />}
-              </div>
-              <div className={styles.profileInfo}>
-                <div className={styles.profileName}>{store.profile?.name || 'User'}</div>
-                <div className={styles.profileLevel}>{tr.levels[levelInfo.level as keyof typeof tr.levels]} level</div>
-              </div>
-            </Link>
-            <button
-              type="button"
-              className={styles.logoutBtn}
-              onClick={() => setShowLogoutConfirm(true)}
-              aria-label={lang === 'id' ? 'Keluar' : 'Log out'}
-              title={lang === 'id' ? 'Keluar' : 'Log out'}
-            >
-              <IconLogOut size={16} />
-            </button>
-          </div>
-
-          <div className={styles.profileXpBar}>
+          <Link href="/leveling" className={styles.profileXpBar} aria-label={lang === 'id' ? 'Lihat progres leveling' : 'View leveling progress'}>
             <div className={styles.profileXpInfo}>
               <span>⭐ Lvl {levelInfo.level}</span>
               <span>{levelInfo.currentXP} XP</span>
@@ -238,7 +200,7 @@ export default function Nav() {
             <div className={styles.profileXpTrack}>
               <div className={styles.profileXpFill} style={{ width: `${levelInfo.progressPercent}%` }} />
             </div>
-          </div>
+          </Link>
         </div>
       </aside>
 

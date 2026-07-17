@@ -1,0 +1,179 @@
+.page {
+  padding-bottom: 40px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+.headerIcon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, var(--color-xp, #F59E0B), #fbbf24);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.3);
+}
+
+.title {
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.desc {
+  font-size: 13px;
+  color: var(--color-text-sub);
+  margin-top: 2px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px;
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.cardHighlight {
+  border-color: var(--tier-color, var(--color-primary));
+  box-shadow: 0 0 0 1px var(--tier-color, var(--color-primary));
+}
+
+.badge {
+  position: absolute;
+  top: -12px;
+  left: 20px;
+  background: var(--tier-color, var(--color-primary));
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+.tierIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  background: var(--tier-bg, var(--gray-100));
+  color: var(--tier-color, var(--color-primary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tierName {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.price {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.pricePeriod {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.features {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+  flex: 1;
+}
+
+.features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-sub);
+  line-height: 1.4;
+}
+
+.checkIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--tier-color, var(--color-success));
+}
+
+.chooseBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 11px;
+  border-radius: var(--radius-md);
+  border: none;
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+}
+
+.chooseBtnFilled {
+  background: var(--tier-color, var(--color-primary));
+  color: #fff;
+}
+
+.chooseBtnFilled:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--tier-color, var(--color-primary)) 40%, transparent);
+}
+
+.chooseBtnOutline {
+  background: transparent;
+  border: 1.5px solid var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.chooseBtnOutline:hover:not(:disabled) {
+  border-color: var(--tier-color, var(--color-primary));
+  color: var(--tier-color, var(--color-primary));
+}
+
+.chooseBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

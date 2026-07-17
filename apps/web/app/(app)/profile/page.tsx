@@ -17,6 +17,43 @@ import {
 } from '../../../lib/storage';
 import onb from '../../onboarding/onboarding.module.css';
 import styles from './profile.module.css';
+import { TIERS, TIER_PRICE_IDR, TIER_DISCOUNT_PCT, TIER_MAX_FOCUS_MINUTES, type Tier, type GatedFeature } from '../../../lib/tiers';
+import {
+  IconCheck, IconLeaf, IconZap, IconStar, IconTrophy,
+  IconCheckSquare, IconBoldText, IconFileText, IconEye, IconUsers,
+} from '../../../components/Icons';
+
+const TIER_NAME: Record<Tier, { id: string; en: string }> = {
+  free: { id: 'Gratis', en: 'Free' },
+  murah: { id: 'Murah', en: 'Basic' },
+  standar: { id: 'Standar', en: 'Standard' },
+  mahal: { id: 'Mahal', en: 'Premium' },
+};
+
+const TIER_ICON: Record<Tier, typeof IconLeaf> = {
+  free: IconLeaf,
+  murah: IconZap,
+  standar: IconStar,
+  mahal: IconTrophy,
+};
+
+const TIER_COLOR: Record<Tier, { fg: string; bg: string }> = {
+  free: { fg: '#059669', bg: '#D1FAE5' },
+  murah: { fg: '#2563EB', bg: '#DBEAFE' },
+  standar: { fg: '#7C3AED', bg: '#EDE9FE' },
+  mahal: { fg: '#B45309', bg: '#FEF3C7' },
+};
+
+interface TierInfo {
+  tier: Tier;
+  totalXp: number;
+  freeSessionUsed: boolean;
+  usage: Record<GatedFeature, { used: number; limit: number; remaining: number }>;
+}
+
+function limitLabel(n: number, lang: 'id' | 'en') {
+  return n < 0 ? (lang === 'id' ? 'tanpa batas' : 'unlimited') : `${n}`;
+}
 
 const AVATARS = ['🧠', '🦋', '🌈', '🐙', '🦊', '🌟', '🐢', '🔥'];
 const INTEREST_OPTIONS = ['Anime', 'Game', 'Musik', 'Masak', 'Olahraga', 'Baca', 'Film', 'Seni'];
@@ -31,6 +68,34 @@ export default function ProfilePage() {
 
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  const [tierInfo, setTierInfo] = useState<TierInfo | null>(null);
+  const [switchingTier, setSwitchingTier] = useState<Tier | null>(null);
+
+  const loadTierInfo = () => {
+    fetch('/api/profile/tier')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => data && setTierInfo(data))
+      .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadTierInfo();
+  }, []);
+
+  const handleSwitchTier = async (tier: Tier) => {
+    setSwitchingTier(tier);
+    try {
+      const res = await fetch('/api/payments/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier }),
+      });
+      if (res.ok) loadTierInfo();
+    } finally {
+      setSwitchingTier(null);
+    }
+  };
 
   const [name, setName] = useState('');
   const [avatar, setAvatar] = useState<string>(AVATARS[0] ?? '🧠');
@@ -142,6 +207,95 @@ export default function ProfilePage() {
         <h1 className={styles.title}>{p.title}</h1>
         <p className={styles.desc}>{p.desc}</p>
       </div>
+
+      {/* Paket & Upgrade */}
+      <section className={styles.section}>
+        <div className={styles.sectionTitle}>{lang === 'id' ? 'Paket & Upgrade' : 'Plan & Upgrade'}</div>
+
+        {!tierInfo ? (
+          <p className="text-sub text-sm">{lang === 'id' ? 'Memuat...' : 'Loading...'}</p>
+        ) : (
+          <>
+            {/* Batas pemakaian bulan ini */}
+            <div className="card card--flat" style={{ padding: 16, marginBottom: 16 }}>
+              <div className="text-xs font-bold text-sub mb-3" style={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                {lang === 'id' ? `Pemakaian bulan ini — paket ${TIER_NAME[tierInfo.tier][lang]}` : `This month's usage — ${TIER_NAME[tierInfo.tier][lang]} plan`}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+                {[
+                  { Icon: IconCheckSquare, label: 'Task Decomposer', value: `${tierInfo.usage.task_decompose.used} / ${limitLabel(tierInfo.usage.task_decompose.limit, lang)}` },
+                  { Icon: IconBoldText, label: 'Bionic Reading', value: `${tierInfo.usage.bionic_reading.used} / ${limitLabel(tierInfo.usage.bionic_reading.limit, lang)}` },
+                  { Icon: IconFileText, label: lang === 'id' ? 'Laporan Klinis' : 'Clinical Report', value: `${tierInfo.usage.clinical_report.used} / ${limitLabel(tierInfo.usage.clinical_report.limit, lang)}` },
+                  { Icon: IconEye, label: 'Focus Mirror', value: `${lang === 'id' ? 'maks' : 'up to'} ${TIER_MAX_FOCUS_MINUTES[tierInfo.tier]} min` },
+                  {
+                    Icon: IconUsers,
+                    label: lang === 'id' ? 'Sesi psikolog' : 'Psychologist session',
+                    value: !tierInfo.freeSessionUsed
+                      ? (lang === 'id' ? 'Sesi pertama gratis' : 'First session free')
+                      : `${lang === 'id' ? 'Diskon' : 'Discount'} ${TIER_DISCOUNT_PCT[tierInfo.tier]}%`,
+                  },
+                ].map((stat) => (
+                  <div key={stat.label} className="flex items-center gap-2">
+                    <span style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--gray-100)', color: 'var(--color-text-sub)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <stat.Icon size={14} />
+                    </span>
+                    <div>
+                      <div className="text-xs text-sub">{stat.label}</div>
+                      <div className="font-bold text-sm">{stat.value}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Toggle antar paket */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+              {TIERS.map((tier) => {
+                const isCurrent = tierInfo.tier === tier;
+                const Icon = TIER_ICON[tier];
+                const color = TIER_COLOR[tier];
+                return (
+                  <button
+                    key={tier}
+                    type="button"
+                    className="card card--flat"
+                    onClick={() => !isCurrent && handleSwitchTier(tier)}
+                    disabled={isCurrent || switchingTier !== null}
+                    style={{
+                      padding: 14, textAlign: 'left', cursor: isCurrent ? 'default' : 'pointer',
+                      border: isCurrent ? `1.5px solid ${color.fg}` : '1.5px solid var(--color-border)',
+                      background: isCurrent ? color.bg : undefined,
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span style={{ width: 26, height: 26, borderRadius: 7, background: color.bg, color: color.fg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Icon size={13} />
+                      </span>
+                      {isCurrent && <IconCheck size={14} style={{ color: color.fg }} />}
+                    </div>
+                    <div className="font-bold text-sm mt-2">{TIER_NAME[tier][lang]}</div>
+                    <div className="text-xs text-sub mt-2">
+                      {tier === 'free' ? (lang === 'id' ? 'Rp0' : '$0') : `Rp${TIER_PRICE_IDR[tier].toLocaleString('id-ID')}/bln`}
+                    </div>
+                    <div className="text-xs mt-2" style={{ color: color.fg, fontWeight: 600 }}>
+                      {isCurrent
+                        ? (lang === 'id' ? 'Paket aktif' : 'Current plan')
+                        : switchingTier === tier
+                        ? (lang === 'id' ? 'Memproses...' : 'Processing...')
+                        : (lang === 'id' ? 'Pindah ke sini' : 'Switch here')}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-sub mt-3">
+              {lang === 'id'
+                ? 'Pembayaran masih simulasi (mock) — belum ada uang beneran yang ditarik.'
+                : 'Payment is currently simulated (mock) — no real money is charged yet.'}
+            </p>
+          </>
+        )}
+      </section>
 
       {/* Basic info */}
       <section className={styles.section}>

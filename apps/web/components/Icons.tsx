@@ -562,3 +562,32 @@ export function IconBatteryFull({ size, ...p }: IconProps) {
     </svg>
   );
 }
+
+export function IconStar({ size, ...p }: IconProps) {
+  return (
+    <svg {...base(size)} {...p}>
+      <path d="M12 2.5l2.9 6.1 6.6.7-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.2 1.3-6.6-4.9-4.6 6.6-.7L12 2.5Z" />
+    </svg>
+  );
+}
+
+export function IconTrophy({ size, ...p }: IconProps) {
+  return (
+    <svg {...base(size)} {...p}>
+      <path d="M8 21h8" />
+      <path d="M12 17v4" />
+      <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" />
+      <path d="M7 5H4a3 3 0 0 0 3 5" />
+      <path d="M17 5h3a3 3 0 0 1-3 5" />
+    </svg>
+  );
+}
+
+export function IconLock({ size, ...p }: IconProps) {
+  return (
+    <svg {...base(size)} {...p}>
+      <rect x="4" y="10.5" width="16" height="10" rx="2" />
+      <path d="M7.5 10.5V7a4.5 4.5 0 0 1 9 0v3.5" />
+    </svg>
+  );
+}

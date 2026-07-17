@@ -10,7 +10,7 @@ const FAB_POS_KEY = 'np-a11y-fab-pos';
 
 export default function AccessibilityPanel() {
   const [open, setOpen] = useState(false);
-  const { fontSize, highContrast, reduceMotion, bionic, tts, setFontSize, toggleContrast, toggleMotion, toggleBionic, toggleTts } = useA11y();
+  const { fontSize, highContrast, reduceMotion, bionic, tts, setFontSize, toggleContrast, toggleMotion, toggleBionic, toggleTts, bionicQuotaExceeded } = useA11y();
   const { lang } = useLang();
   const a11y = translations[lang].a11y;
 
@@ -224,6 +224,16 @@ export default function AccessibilityPanel() {
                   <p className={`${styles.bionicPreview} ${bionic ? styles.bionicPreviewOn : ''}`}>
                     <BionicPreviewText text={a11y.bionic_preview} />
                   </p>
+                  {bionicQuotaExceeded && (
+                    <p style={{ marginTop: 8, fontSize: 12.5, fontWeight: 600, color: '#92400E' }}>
+                      {lang === 'id'
+                        ? `Kuota bulan ini (${bionicQuotaExceeded.limit}x, paket ${bionicQuotaExceeded.tier}) habis. `
+                        : `This month's quota (${bionicQuotaExceeded.limit}x, ${bionicQuotaExceeded.tier} plan) is used up. `}
+                      <a href="/pricing" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>
+                        {lang === 'id' ? 'Upgrade' : 'Upgrade'}
+                      </a>
+                    </p>
+                  )}
                 </div>
 
                 <label className={`${styles.feature} ${styles.accentBlue}`}>

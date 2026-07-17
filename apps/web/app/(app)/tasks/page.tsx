@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { useStorage } from '../../../hooks/useStorage';
-import { decomposeTasks, reframeWithInterest, generateFrictionBuster, FrictionBusterResult } from '../../../lib/gemini';
+import { reframeWithInterest, generateFrictionBuster, FrictionBusterResult, DecomposedTask } from '../../../lib/gemini';
 import { genId, checkTaskDecay, checkChronicStuck, Task, MicroTask, TaskGroup } from '../../../lib/storage';
 import { XP_REWARDS } from '../../../lib/gamification';
 import { createCloudSpeaker } from '../../../lib/tts';
@@ -344,6 +344,7 @@ export default function TasksPage() {
 
   const [newTask, setNewTask] = useState('');
   const [isDecomposing, setIsDecomposing] = useState(false);
+  const [quotaExceeded, setQuotaExceeded] = useState<{ tier: string; limit: number } | null>(null);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [frictionTaskId, setFrictionTaskId] = useState<string | null>(null);
@@ -451,8 +452,20 @@ export default function TasksPage() {
   const handleDecompose = async () => {
     if (!newTask.trim()) return;
     setIsDecomposing(true);
+    setQuotaExceeded(null);
     try {
-      const result = await decomposeTasks(newTask, interests, energy, lang);
+      const res = await fetch('/api/decompose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ taskTitle: newTask, interests, energyLevel: energy, lang }),
+      });
+      if (res.status === 402) {
+        const info = await res.json();
+        setQuotaExceeded({ tier: info.tier, limit: info.limit });
+        return;
+      }
+      if (!res.ok) throw new Error(`decompose_api_${res.status}`);
+      const result: DecomposedTask = await res.json();
       const taskId = genId();
       const now = new Date().toISOString();
 
@@ -639,6 +652,19 @@ export default function TasksPage() {
             <p className="text-sub mt-2">{tr.tasks.desc}</p>
           </div>
         </div>
+
+        {quotaExceeded && (
+          <div className="card" style={{ marginBottom: 16, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: '#92400E' }}>
+              {lang === 'id'
+                ? `Kuota Task Decomposer bulan ini (${quotaExceeded.limit}x, paket ${quotaExceeded.tier}) sudah habis.`
+                : `This month's Task Decomposer quota (${quotaExceeded.limit}x, ${quotaExceeded.tier} plan) is used up.`}
+            </span>
+            <a href="/pricing" className="btn btn-primary btn-sm" style={{ whiteSpace: 'nowrap' }}>
+              {lang === 'id' ? 'Upgrade' : 'Upgrade'}
+            </a>
+          </div>
+        )}
 
         {/* Input Card */}
         <div className={`card ${styles.inputCard}`}>

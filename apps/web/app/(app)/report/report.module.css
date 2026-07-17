@@ -190,6 +190,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-top: auto;
   padding-top: 10px;
   border-top: 1px dashed var(--color-border);

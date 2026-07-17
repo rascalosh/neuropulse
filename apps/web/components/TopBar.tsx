@@ -1,20 +1,21 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { useStorage } from '../hooks/useStorage';
-import { checkTaskDecay } from '../lib/storage';
 import { useLang } from '../contexts/providers';
 import { translations } from '../lib/i18n';
-import { IconActivity, IconBell, IconMoon } from './Icons';
+import { IconActivity, IconMoon, IconUser, IconChevronDown, IconLogOut } from './Icons';
 import styles from './TopBar.module.css';
 
 export default function TopBar() {
   const [store, updateStore] = useStorage();
-  const { lang } = useLang();
+  const { lang, setLang } = useLang();
   const tr = translations[lang];
-  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -29,6 +30,30 @@ export default function TopBar() {
     setTheme(next);
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('neuropulse-theme', next);
+  };
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleConfirmLogout = async () => {
+    try {
+      const { createClient } = await import('../utils/supabase/client');
+      const supabase = createClient();
+      await supabase.auth.signOut();
+
+      const { clearStore } = await import('../lib/storage');
+      clearStore();
+
+      setShowLogoutConfirm(false);
+      window.location.href = '/login';
+    } catch (err) {
+      console.error('Error logging out:', err);
+    }
   };
 
   useEffect(() => {
@@ -67,7 +92,6 @@ export default function TopBar() {
 
   const energy = String(store.currentEnergy) as keyof typeof tr.energy;
   const energyLabel = tr.energy[energy];
-  const decayingCount = store.tasks.filter((t) => t.status === 'active' && checkTaskDecay(t)).length;
 
   return (
     <header className={styles.topbar}>
@@ -84,11 +108,84 @@ export default function TopBar() {
         <span>{theme === 'dark' ? (lang === 'id' ? 'Gelap' : 'Dark') : (lang === 'id' ? 'Terang' : 'Light')}</span>
       </button>
 
-      <a href="/tasks" className={styles.bellBtn} aria-label="Notifications">
-        <IconBell size={17} />
-        {decayingCount > 0 && <span className={styles.bellDot} />}
-      </a>
+      <div className={styles.langToggle} role="group" aria-label="Language switcher">
+        <button
+          className={`${styles.langBtn} ${lang === 'id' ? styles.langActive : ''}`}
+          onClick={() => setLang('id')}
+          aria-pressed={lang === 'id'}
+          lang="id"
+        >
+          ID
+        </button>
+        <button
+          className={`${styles.langBtn} ${lang === 'en' ? styles.langActive : ''}`}
+          onClick={() => setLang('en')}
+          aria-pressed={lang === 'en'}
+          lang="en"
+        >
+          EN
+        </button>
+      </div>
+
+      <div className={styles.profileMenu} ref={menuRef}>
+        <button
+          type="button"
+          className={styles.profileTrigger}
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+        >
+          <span className={styles.avatar} aria-hidden="true">
+            {store.profile?.avatar || <IconUser size={15} />}
+          </span>
+          <span className={styles.profileName}>{store.profile?.name || 'User'}</span>
+          <IconChevronDown size={13} className={`${styles.chevron} ${menuOpen ? styles.chevronOpen : ''}`} />
+        </button>
+
+        {menuOpen && (
+          <div className={styles.dropdown} role="menu">
+            <Link href="/profile" className={styles.dropdownItem} role="menuitem" onClick={() => setMenuOpen(false)}>
+              <IconUser size={14} /> {lang === 'id' ? 'Edit Profil' : 'Edit Profile'}
+            </Link>
+            <button
+              type="button"
+              className={`${styles.dropdownItem} ${styles.dropdownItemDanger}`}
+              role="menuitem"
+              onClick={() => { setMenuOpen(false); setShowLogoutConfirm(true); }}
+            >
+              <IconLogOut size={14} /> {lang === 'id' ? 'Keluar' : 'Log out'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {showLogoutConfirm && (
+        <div className={styles.modalOverlay} role="dialog" aria-modal="true" aria-labelledby="logout-title">
+          <div className={styles.modalCard}>
+            <div className={styles.modalHeader}>
+              <div className={styles.modalIconWrap}>
+                <IconLogOut size={22} />
+              </div>
+              <h2 id="logout-title" className={styles.modalTitle}>
+                {lang === 'id' ? 'Keluar dari NeuroPulse?' : 'Log out of NeuroPulse?'}
+              </h2>
+            </div>
+            <p className={styles.modalBody}>
+              {lang === 'id'
+                ? 'Semua sesi fokus yang sedang berjalan akan dihentikan. Anda harus masuk kembali untuk mengakses data Anda.'
+                : 'Any active focus sessions will be stopped. You will need to log back in to access your data.'}
+            </p>
+            <div className={styles.modalActions}>
+              <button type="button" className={styles.modalBtnCancel} onClick={() => setShowLogoutConfirm(false)}>
+                {lang === 'id' ? 'Batal' : 'Cancel'}
+              </button>
+              <button type="button" className={styles.modalBtnConfirm} onClick={handleConfirmLogout}>
+                {lang === 'id' ? 'Keluar' : 'Log Out'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
-

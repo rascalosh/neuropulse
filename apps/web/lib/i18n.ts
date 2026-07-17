@@ -39,6 +39,7 @@ export const translations = {
       focusmirror: 'Focus Mirror',
       insights: 'Insights',
       omnifocus: 'OmniFocus',
+      leveling: 'Leveling',
     },
     // Onboarding
     onboarding: {
@@ -393,6 +394,7 @@ export const translations = {
       focusmirror: 'Focus Mirror',
       insights: 'Insights',
       omnifocus: 'OmniFocus',
+      leveling: 'Leveling',
     },
     onboarding: {
       step_of: 'of',

@@ -1,6 +1,6 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { getStore } from '../lib/storage';
 import { getMascotSrc } from '../lib/mascot';
@@ -8,11 +8,13 @@ import { createClient } from '../utils/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { useLang } from '../contexts/providers';
 import { translations } from '../lib/i18n';
+import { getLevelInfo } from '../lib/gamification';
 import {
   IconArrowRight, IconCheckSquare, IconGift,
   IconEye, IconMessageCircle, IconZap, IconFileText,
   IconMoon, IconSun, IconBrain, IconCheck, IconSparkles,
   IconHeart, IconLeaf, IconLightbulb, IconBatteryLow, IconBatteryFull, IconFlame,
+  IconStar, IconTrophy, IconLock,
 } from '../components/Icons';
 import styles from './landing.module.css';
 
@@ -52,6 +54,88 @@ const COPY = {
       { title: 'Istirahat itu valid', desc: 'Streak tidak bisa gagal. Jeda bukan kegagalan, tapi bagian dari ritme.' },
       { title: 'Kecil itu kuat', desc: 'Mulai dari langkah 5 menit. Momentum mengalahkan kesempurnaan.' },
     ],
+    gamKicker: 'Bikin nagih (yang bagus)',
+    gamTitle: 'Progresmu jadi terasa seperti game',
+    gamSub: 'Tiap micro-task yang selesai kasih XP, naikin level, dan jaga streak-mu — biar otakmu dapet reward instan yang dia suka.',
+    gamLevelName: 'Tunas',
+    gamCards: [
+      { title: 'XP & Level', desc: 'Dari "Benih" sampai "Mythic" — 8 level yang bikin progres jangka panjang kelihatan nyata.' },
+      { title: 'Streak anti-gagal', desc: 'Streak tidak reset gara-gara satu hari off. Konsistensi dirayakan, bukan dihukum.' },
+      { title: 'Achievement & badge', desc: 'Unlock badge kayak "Centurion" atau "Explorer" tiap kali kamu ngelewatin milestone.' },
+    ],
+    priceKicker: 'Harga',
+    priceTitle: '4 paket, mulai dari gratis',
+    priceSub: 'Semua paket punya fitur inti NeuroPulse. Makin tinggi paketnya, makin longgar batasnya — dan makin murah sesi psikolognya.',
+    priceBillingNote: 'Harga per bulan, bisa cancel kapan saja.',
+    plans: [
+      {
+        tier: 'free',
+        name: 'Gratis',
+        price: 'Rp0',
+        period: '/selamanya',
+        desc: 'Buat kenalan dulu sama NeuroPulse.',
+        features: [
+          'Task Decomposer 15x/bulan',
+          'Bionic Reading 20x/bulan',
+          '1 Laporan Klinis/bulan',
+          'Focus Mirror 25 menit (fixed)',
+          'Sesi psikolog pertama gratis, lalu Rp150rb/sesi',
+        ],
+        cta: 'Mulai Gratis',
+        highlight: false,
+        badge: '',
+      },
+      {
+        tier: 'murah',
+        name: 'Murah',
+        price: 'Rp29rb',
+        period: '/bulan',
+        desc: 'Buat yang mulai kepake tiap hari.',
+        features: [
+          'Task Decomposer 60x/bulan',
+          'Bionic Reading 100x/bulan',
+          '2 Laporan Klinis/bulan',
+          'Focus Mirror pilih 25/45 menit',
+          'Sesi psikolog diskon 10%',
+        ],
+        cta: 'Pilih Murah',
+        highlight: false,
+        badge: '',
+      },
+      {
+        tier: 'standar',
+        name: 'Standar',
+        price: 'Rp79rb',
+        period: '/bulan',
+        desc: 'Paling seimbang buat pemakaian rutin.',
+        features: [
+          'Task Decomposer & Bionic Reading tanpa batas',
+          '4 Laporan Klinis/bulan',
+          'Focus Mirror custom 10–90 menit',
+          'Sesi psikolog diskon 25%',
+        ],
+        cta: 'Pilih Standar',
+        highlight: true,
+        badge: 'Paling populer',
+      },
+      {
+        tier: 'mahal',
+        name: 'Mahal',
+        price: 'Rp199rb',
+        period: '/bulan',
+        desc: 'Buat yang mau dampingan psikolog rutin.',
+        features: [
+          'Semua fitur tanpa batas',
+          'Laporan Klinis otomatis tiap sesi',
+          'Focus Mirror custom 10–120 menit + preset',
+          'Sesi psikolog diskon 40% + 1 gratis/bulan',
+        ],
+        cta: 'Pilih Mahal',
+        highlight: false,
+        badge: '',
+      },
+    ],
+    priceFootnote: 'Pembayaran sekarang masih simulasi (mock) — belum ada uang beneran yang ditarik.',
     ctaTitle: 'Ready when you are',
     ctaDesc: 'Tidak perlu menunggu momen sempurna. Pulse sudah menunggumu.',
     ctaBtn: 'Mulai NeuroPulse',
@@ -93,6 +177,88 @@ const COPY = {
       { title: 'Rest is valid', desc: 'Streaks can\'t break. Pauses aren\'t failures — they\'re part of the rhythm.' },
       { title: 'Small is mighty', desc: 'Start with a 5-minute step. Momentum beats perfection.' },
     ],
+    gamKicker: 'Made to be (a good kind of) addictive',
+    gamTitle: 'Your progress feels like a game',
+    gamSub: 'Every finished micro-task earns XP, levels you up, and keeps your streak alive — so your brain gets the instant reward it craves.',
+    gamLevelName: 'Sprout',
+    gamCards: [
+      { title: 'XP & Levels', desc: 'From "Seed" to "Mythic" — 8 levels that make long-term progress feel real.' },
+      { title: 'Unbreakable streaks', desc: 'One off day won\'t reset your streak. Consistency gets celebrated, not punished.' },
+      { title: 'Achievements & badges', desc: 'Unlock badges like "Centurion" or "Explorer" every time you hit a milestone.' },
+    ],
+    priceKicker: 'Pricing',
+    priceTitle: '4 plans, starting free',
+    priceSub: 'Every plan gets NeuroPulse\'s core features. Higher plans get looser limits — and cheaper psychologist sessions.',
+    priceBillingNote: 'Billed monthly, cancel anytime.',
+    plans: [
+      {
+        tier: 'free',
+        name: 'Free',
+        price: '$0',
+        period: '/forever',
+        desc: 'Get to know NeuroPulse first.',
+        features: [
+          'Task Decomposer 15x/month',
+          'Bionic Reading 20x/month',
+          '1 Clinical Report/month',
+          'Focus Mirror 25 min (fixed)',
+          'First psychologist session free, then Rp150k/session',
+        ],
+        cta: 'Start Free',
+        highlight: false,
+        badge: '',
+      },
+      {
+        tier: 'murah',
+        name: 'Basic',
+        price: 'Rp29k',
+        period: '/month',
+        desc: 'For when you start using it daily.',
+        features: [
+          'Task Decomposer 60x/month',
+          'Bionic Reading 100x/month',
+          '2 Clinical Reports/month',
+          'Focus Mirror: choose 25/45 min',
+          '10% off psychologist sessions',
+        ],
+        cta: 'Choose Basic',
+        highlight: false,
+        badge: '',
+      },
+      {
+        tier: 'standar',
+        name: 'Standard',
+        price: 'Rp79k',
+        period: '/month',
+        desc: 'The best balance for regular use.',
+        features: [
+          'Unlimited Task Decomposer & Bionic Reading',
+          '4 Clinical Reports/month',
+          'Focus Mirror: custom 10–90 min',
+          '25% off psychologist sessions',
+        ],
+        cta: 'Choose Standard',
+        highlight: true,
+        badge: 'Most popular',
+      },
+      {
+        tier: 'mahal',
+        name: 'Premium',
+        price: 'Rp199k',
+        period: '/month',
+        desc: 'For regular psychologist support.',
+        features: [
+          'Everything unlimited',
+          'Auto-generated Clinical Report per session',
+          'Focus Mirror: custom 10–120 min + presets',
+          '40% off psychologist sessions + 1 free/month',
+        ],
+        cta: 'Choose Premium',
+        highlight: false,
+        badge: '',
+      },
+    ],
+    priceFootnote: 'Payment is currently simulated (mock) — no real money is charged yet.',
     ctaTitle: 'Ready when you are',
     ctaDesc: 'No need to wait for the perfect moment. Pulse is already waiting for you.',
     ctaBtn: 'Start NeuroPulse',
@@ -172,6 +338,7 @@ export default function LandingPage() {
   }, []);
 
   const energyInfo = tr.energy[String(energy) as keyof typeof tr.energy];
+  const demoLevel = getLevelInfo(110);
 
   return (
     <div className={styles.page}>
@@ -370,6 +537,43 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* ── Gamification showcase ── */}
+        <section className={styles.section} aria-labelledby="gam-title">
+          <div className={styles.sectionHead}>
+            <span className={styles.kicker}>{t.gamKicker}</span>
+            <h2 id="gam-title" className={styles.sectionTitle}>{t.gamTitle}</h2>
+            <p className={styles.sectionSub}>{t.gamSub}</p>
+          </div>
+          <div className={styles.gamPanel}>
+            <div className={styles.gamShowcase}>
+              <div className={styles.gamLevelBadge} style={{ '--lvl-color': demoLevel.color } as CSSProperties}>
+                <IconStar size={20} />
+                <span>Lvl {demoLevel.level}</span>
+              </div>
+              <p className={styles.gamLevelName}>{t.gamLevelName}</p>
+              <div className={styles.gamXpBar}>
+                <div className={styles.gamXpBarFill} style={{ width: `${demoLevel.progressPercent}%` }} />
+              </div>
+              <p className={styles.gamXpLabel}>
+                <IconFlame size={13} className={styles.gamXpFlame} /> {demoLevel.currentXP} XP
+                <span className={styles.gamXpNext}>· {demoLevel.xpToNext} {lang === 'id' ? 'lagi ke level berikutnya' : 'to next level'}</span>
+              </p>
+            </div>
+            <div className={styles.gamCards}>
+              {t.gamCards.map((card, i) => {
+                const Icon = [IconStar, IconFlame, IconTrophy][i] ?? IconStar;
+                return (
+                  <div key={card.title} className={styles.gamCard}>
+                    <div className={styles.gamCardIcon} aria-hidden="true"><Icon size={18} /></div>
+                    <h3 className={styles.gamCardTitle}>{card.title}</h3>
+                    <p className={styles.gamCardDesc}>{card.desc}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
         {/* ── Principles ── */}
         <section className={styles.section} aria-labelledby="principles-title">
           <div className={styles.sectionHead}>
@@ -388,6 +592,47 @@ export default function LandingPage() {
               );
             })}
           </div>
+        </section>
+
+        {/* ── Pricing ── */}
+        <section className={styles.section} aria-labelledby="price-title">
+          <div className={styles.sectionHead}>
+            <span className={styles.kicker}>{t.priceKicker}</span>
+            <h2 id="price-title" className={styles.sectionTitle}>{t.priceTitle}</h2>
+            <p className={styles.sectionSub}>{t.priceSub}</p>
+          </div>
+          <div className={styles.pricingGrid}>
+            {t.plans.map((plan) => (
+              <div
+                key={plan.name}
+                className={`${styles.priceCard} ${plan.highlight ? styles.priceCardHighlight : ''}`}
+              >
+                {plan.badge && <span className={styles.priceBadge}>{plan.badge}</span>}
+                <h3 className={styles.priceName}>{plan.name}</h3>
+                <p className={styles.priceAmount}>
+                  {plan.price}<span className={styles.pricePeriod}>{plan.period}</span>
+                </p>
+                <p className={styles.priceDesc}>{plan.desc}</p>
+                <ul className={styles.priceFeatures}>
+                  {plan.features.map((f) => (
+                    <li key={f}>
+                      <span className={styles.priceCheck} aria-hidden="true"><IconCheck size={13} /></span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href="/onboarding"
+                  className={plan.highlight ? styles.btnPrimary : styles.btnSecondary}
+                >
+                  {plan.cta}
+                </Link>
+              </div>
+            ))}
+          </div>
+          <p className={styles.pricingFootnote}>
+            <IconLock size={12} className={styles.pricingFootnoteIcon} /> {t.priceFootnote}
+          </p>
         </section>
 
         {/* ── Final CTA ── */}

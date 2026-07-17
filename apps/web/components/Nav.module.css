@@ -338,6 +338,36 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
+.upgradeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, var(--color-xp, #F59E0B), #fbbf24);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform var(--duration-fast) var(--ease), box-shadow var(--duration-fast) var(--ease);
+}
+
+.upgradeBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+  color: #fff;
+}
+
+.upgradeBtnArrow {
+  transition: transform var(--duration-fast) var(--ease);
+}
+
+.upgradeBtn:hover .upgradeBtnArrow {
+  transform: translateX(2px);
+}
+
 .profileRow {
   display: flex;
   align-items: center;
@@ -589,9 +619,17 @@
 
 /* XP Progress Bar under Profile in Nav */
 .profileXpBar {
+  display: block;
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px dashed var(--color-border);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  transition: opacity var(--duration-fast) var(--ease);
+}
+
+.profileXpBar:hover {
+  opacity: 0.8;
 }
 
 .profileXpInfo {

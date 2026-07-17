@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useStorage } from '../../../hooks/useStorage';
+import { genId } from '../../../lib/storage';
 import { useLang } from '../../../contexts/providers';
 import { translations } from '../../../lib/i18n';
 import { IconEye, IconCamera } from '../../../components/Icons';
@@ -49,9 +50,36 @@ export default function FocusMirrorPage() {
   const [ear, setEar] = useState<number>(0.3);
   const [blinkCount, setBlinkCount] = useState<number>(0);
   const [isFocusing, setIsFocusing] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(25 * 60); // Timer 25 Menit (dalam detik)
+  const [durationOptions, setDurationOptions] = useState<number[]>([25]);
+  const [plannedMinutes, setPlannedMinutes] = useState(25);
+  const [timeLeft, setTimeLeft] = useState(25 * 60); // Timer sesi (dalam detik), dari plannedMinutes
   const [yawDebug, setYawDebug] = useState<number>(0); // buat kalibrasi threshold saat demo
   const [gazeDebug, setGazeDebug] = useState<number>(0); // buat kalibrasi threshold saat demo
+
+  // Sesi server-side (Supabase) — jam fokus yang dipercaya untuk XP adalah
+  // yang dihitung server dari heartbeat, bukan angka lokal yang bisa diedit.
+  const focusSessionIdRef = useRef<string | null>(null);
+  const distractedRef = useRef(false); // dipakai heartbeat; default false kalau kamera mati
+  const [sessionActive, setSessionActive] = useState(false); // mirror focusSessionIdRef buat re-render UI
+  const [sessionSummary, setSessionSummary] = useState<{ focusedSeconds: number; xpAwarded: number } | null>(null);
+  const [isEndingSession, setIsEndingSession] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/profile/tier')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) return;
+        const opts: number[] = data.focusMirror?.durationOptions ?? [25];
+        setDurationOptions(opts);
+        setPlannedMinutes((prev) => (opts.includes(prev) ? prev : (opts[0] ?? 25)));
+      })
+      .catch(() => {});
+  }, []);
+
+  // Reset timer kalau durasi diganti sebelum sesi dimulai
+  useEffect(() => {
+    if (!focusSessionIdRef.current) setTimeLeft(plannedMinutes * 60);
+  }, [plannedMinutes]);
 
   // Statistik buat laporan & UI reward
   const [drowsyAlerts, setDrowsyAlerts] = useState(0);
@@ -194,12 +222,12 @@ export default function FocusMirrorPage() {
   // Bikin & unduh laporan sesi sebagai file teks
   const downloadReport = useCallback(() => {
     const now = new Date();
-    const timeUsedSec = 25 * 60 - timeLeft;
+    const timeUsedSec = plannedMinutes * 60 - timeLeft;
     const lines = [
       'Laporan Sesi FocusMirror',
       `Dibuat: ${now.toLocaleString('id-ID')}`,
       '',
-      `Waktu sesi terpakai: ${formatTime(timeUsedSec)} dari 25:00`,
+      `Waktu sesi terpakai: ${formatTime(timeUsedSec)} dari ${plannedMinutes}:00`,
       `Total kedipan: ${blinkCount}`,
       '',
       'Ringkasan gangguan fokus:',
@@ -211,6 +239,14 @@ export default function FocusMirrorPage() {
       'Ringkasan pencapaian fokus:',
       `- Streak fokus terpanjang: ${formatTime(longestFocusMs / 1000)}`,
       `- Reward tercapai (tiap ${FOCUS_REWARD_INTERVAL_MS / 60000} menit fokus berturut-turut): ${rewardCount}x`,
+      ...(sessionSummary
+        ? [
+            '',
+            'Sesi server (dipakai untuk XP):',
+            `- Waktu fokus (server): ${formatTime(sessionSummary.focusedSeconds)}`,
+            `- XP didapat: ${sessionSummary.xpAwarded}`,
+          ]
+        : []),
       '',
       'Dibuat otomatis oleh FocusMirror.',
     ];
@@ -223,7 +259,58 @@ export default function FocusMirrorPage() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [timeLeft, blinkCount, drowsyAlerts, distractAlerts, tabSwitchAlerts, totalDistractedMs, longestFocusMs, rewardCount]);
+  }, [plannedMinutes, timeLeft, blinkCount, drowsyAlerts, distractAlerts, tabSwitchAlerts, totalDistractedMs, longestFocusMs, rewardCount, sessionSummary]);
+
+  // Sesi server: mulai begitu user pertama kali menekan "Mulai Sesi Fokus".
+  const ensureFocusSessionStarted = useCallback(async () => {
+    if (focusSessionIdRef.current) return;
+    try {
+      const res = await fetch('/api/focus/session/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plannedDurationS: plannedMinutes * 60 }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        focusSessionIdRef.current = data.sessionId;
+        setSessionActive(true);
+      }
+    } catch {
+      // Offline — sesi lanjut jalan secara lokal saja, tanpa XP server.
+    }
+  }, [plannedMinutes]);
+
+  // Tutup sesi server, klaim XP (dari waktu fokus yang dihitung server, bukan client),
+  // dan cerminkan XP-nya ke local store biar XP bar dashboard ikut update.
+  const endFocusSession = useCallback(async () => {
+    const sessionId = focusSessionIdRef.current;
+    if (!sessionId) return;
+    setIsEndingSession(true);
+    try {
+      const res = await fetch('/api/focus/session/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, blinkCount, rewardCount }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSessionSummary({ focusedSeconds: data.focusedSeconds, xpAwarded: data.xpAwarded });
+        if (data.xpAwarded > 0) {
+          updateStore((prev) => ({
+            ...prev,
+            totalXP: prev.totalXP + data.xpAwarded,
+            xpHistory: [...prev.xpHistory, { id: genId(), amount: data.xpAwarded, reason: 'Focus Mirror session 🎯', timestamp: new Date().toISOString() }],
+          }));
+        }
+      }
+    } catch {
+      // Offline — XP server tidak tercatat, tapi sesi lokal tetap selesai.
+    } finally {
+      focusSessionIdRef.current = null;
+      setSessionActive(false);
+      setIsEndingSession(false);
+    }
+  }, [blinkCount, rewardCount, updateStore]);
 
   // Timer Effect
   useEffect(() => {
@@ -231,6 +318,46 @@ export default function FocusMirrorPage() {
     const timerId = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
     return () => clearInterval(timerId);
   }, [isFocusing, timeLeft]);
+
+  // Waktu sesi habis: hentikan sesi & klaim XP otomatis.
+  useEffect(() => {
+    if (timeLeft === 0 && focusSessionIdRef.current) {
+      setIsFocusing(false);
+      endFocusSession();
+    }
+  }, [timeLeft, endFocusSession]);
+
+  // Heartbeat ke server tiap 20 detik selama sesi aktif — server yang menghitung
+  // detik fokus/distraksi dari waktunya sendiri, bukan dari angka yang dikirim client.
+  useEffect(() => {
+    if (!isFocusing) return;
+    const intervalId = setInterval(() => {
+      const sessionId = focusSessionIdRef.current;
+      if (!sessionId) return;
+      fetch('/api/focus/session/heartbeat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, focused: !distractedRef.current }),
+      }).catch(() => {});
+    }, 20000);
+    return () => clearInterval(intervalId);
+  }, [isFocusing]);
+
+  // Kalau user tinggalkan halaman selagi sesi masih aktif, tutup sesi di server
+  // (best-effort — keepalive supaya request tetap terkirim walau tab langsung ditutup).
+  useEffect(() => {
+    return () => {
+      const sessionId = focusSessionIdRef.current;
+      if (!sessionId) return;
+      fetch('/api/focus/session/end', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, blinkCount, rewardCount }),
+        keepalive: true,
+      }).catch(() => {});
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Pulse maskotnya tiap 10 detik selama sesi fokus jalan — pengingat lembut yang
   // konsisten, bukan cuma reaktif ke drowsy/distracted detection.
@@ -280,7 +407,11 @@ export default function FocusMirrorPage() {
 
   // AI & Webcam Effect
   useEffect(() => {
-    if (!cameraOn) return;
+    if (!cameraOn) {
+      // Tanpa kamera, tidak ada deteksi distraksi — anggap fokus selama sesi jalan.
+      distractedRef.current = false;
+      return;
+    }
 
     // Mediapipe/TFLite WASM ngirim log INFO & WARNING lewat console.error (bukan console.log),
     // jadi tanpa filter ini overlay error Next.js dev bakal salah nangkep log yang sebenarnya aman.
@@ -437,6 +568,7 @@ export default function FocusMirrorPage() {
             }
 
             setStatus(currentState);
+            distractedRef.current = isDistracted;
 
             // --- D. Eskalasi: alarm lembut cuma setelah distraksi bertahan lama,
             //        + reward pas berhasil fokus lama. Semua cuma jalan saat sesi aktif. ---
@@ -524,6 +656,31 @@ export default function FocusMirrorPage() {
           <p className="text-sub mt-2" style={{marginBottom: '5px'}}>
             Timer: <span className="font-mono font-bold text-lg text-blue-600">{formatTime(timeLeft)}</span>
           </p>
+
+          {!sessionActive && (
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <label className="text-xs text-sub font-semibold" htmlFor="fm-duration">
+                {lang === 'id' ? 'Durasi sesi:' : 'Session length:'}
+              </label>
+              <select
+                id="fm-duration"
+                className="input"
+                style={{ width: 'auto', padding: '6px 10px', fontSize: 13.5 }}
+                value={plannedMinutes}
+                onChange={(e) => setPlannedMinutes(Number(e.target.value))}
+              >
+                {durationOptions.map((m) => (
+                  <option key={m} value={m}>{m} {lang === 'id' ? 'menit' : 'min'}</option>
+                ))}
+              </select>
+              {durationOptions.length === 1 && (
+                <Link href="/pricing" className="text-xs" style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}>
+                  {lang === 'id' ? 'Upgrade untuk durasi custom' : 'Upgrade for custom durations'}
+                </Link>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-3 justify-center mt-4">
             <button
               className="btn btn-secondary"
@@ -537,8 +694,8 @@ export default function FocusMirrorPage() {
                 }));
               }}
             >
-              {cameraOn 
-                ? (lang === 'id' ? 'Matikan Kamera' : 'Turn Off Camera') 
+              {cameraOn
+                ? (lang === 'id' ? 'Matikan Kamera' : 'Turn Off Camera')
                 : (lang === 'id' ? 'Aktifkan Kamera' : 'Turn On Camera')}
             </button>
             <button
@@ -550,14 +707,32 @@ export default function FocusMirrorPage() {
             <button
               className={`btn ${isFocusing ? 'btn-danger' : 'btn-primary'}`}
               onClick={() => {
-                if (!isFocusing) mascotRef.current?.openPip();
+                if (!isFocusing) {
+                  mascotRef.current?.openPip();
+                  ensureFocusSessionStarted();
+                }
                 setIsFocusing(!isFocusing);
               }}
               disabled={timeLeft === 0}
             >
               {isFocusing ? 'Jeda Sesi' : 'Mulai Sesi Fokus'}
             </button>
+            {sessionActive && !isFocusing && (
+              <button className="btn btn-outline" onClick={endFocusSession} disabled={isEndingSession}>
+                {isEndingSession
+                  ? (lang === 'id' ? 'Menyimpan...' : 'Saving...')
+                  : (lang === 'id' ? 'Selesai & Klaim XP' : 'Finish & Claim XP')}
+              </button>
+            )}
           </div>
+
+          {sessionSummary && (
+            <p className="text-sm font-semibold mt-3" style={{ color: 'var(--color-xp, #F59E0B)' }}>
+              {lang === 'id'
+                ? `+${sessionSummary.xpAwarded} XP dari ${formatTime(sessionSummary.focusedSeconds)} fokus nyata 🔥`
+                : `+${sessionSummary.xpAwarded} XP from ${formatTime(sessionSummary.focusedSeconds)} of real focus 🔥`}
+            </p>
+          )}
         </div>
 
         {showReward && (

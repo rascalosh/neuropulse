@@ -40,8 +40,9 @@ interface A11yCtx extends A11ySettings {
   setFontSize: (s: A11ySettings['fontSize']) => void;
   toggleContrast: () => void;
   toggleMotion: () => void;
-  toggleBionic: () => void;
+  toggleBionic: () => Promise<void>;
   toggleTts: () => void;
+  bionicQuotaExceeded: { tier: string; limit: number } | null;
 }
 
 const A11yContext = createContext<A11yCtx>({
@@ -53,8 +54,9 @@ const A11yContext = createContext<A11yCtx>({
   setFontSize: () => {},
   toggleContrast: () => {},
   toggleMotion: () => {},
-  toggleBionic: () => {},
+  toggleBionic: async () => {},
   toggleTts: () => {},
+  bionicQuotaExceeded: null,
 });
 export const useA11y = () => useContext(A11yContext);
 
@@ -64,6 +66,7 @@ export function A11yProvider({ children }: { children: ReactNode }) {
   const [reduceMotion, setReduceMotion] = useState(false);
   const [bionic, setBionic] = useState(false);
   const [tts, setTts] = useState(false);
+  const [bionicQuotaExceeded, setBionicQuotaExceeded] = useState<{ tier: string; limit: number } | null>(null);
 
   useEffect(() => {
     const s = localStorage.getItem('np_a11y');
@@ -116,9 +119,30 @@ export function A11yProvider({ children }: { children: ReactNode }) {
     save({ ...current(), reduceMotion: !reduceMotion });
   };
 
-  const toggleBionic = () => {
-    setBionic(!bionic);
-    save({ ...current(), bionic: !bionic });
+  const toggleBionic = async () => {
+    // Turning OFF is always free; turning ON counts against the monthly
+    // bionic-reading quota, checked server-side (Supabase RLS/RPC), since
+    // the tier itself lives outside client-editable localStorage.
+    if (bionic) {
+      setBionic(false);
+      save({ ...current(), bionic: false });
+      return;
+    }
+    try {
+      const res = await fetch('/api/bionic/check', { method: 'POST' });
+      const data = await res.json();
+      if (!data.allowed) {
+        setBionicQuotaExceeded({ tier: data.tier, limit: data.limit });
+        return;
+      }
+      setBionicQuotaExceeded(null);
+      setBionic(true);
+      save({ ...current(), bionic: true });
+    } catch {
+      // Offline / API unavailable — fail open so accessibility isn't blocked by a network hiccup.
+      setBionic(true);
+      save({ ...current(), bionic: true });
+    }
   };
 
   const toggleTts = () => {
@@ -127,7 +151,7 @@ export function A11yProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <A11yContext.Provider value={{ fontSize, highContrast, reduceMotion, bionic, tts, setFontSize, toggleContrast, toggleMotion, toggleBionic, toggleTts }}>
+    <A11yContext.Provider value={{ fontSize, highContrast, reduceMotion, bionic, tts, setFontSize, toggleContrast, toggleMotion, toggleBionic, toggleTts, bionicQuotaExceeded }}>
       {children}
     </A11yContext.Provider>
   );
