@@ -542,3 +542,23 @@ export function IconX({ size, ...p }: IconProps) {
     </svg>
   );
 }
+
+export function IconBatteryLow({ size, ...p }: IconProps) {
+  return (
+    <svg {...base(size)} {...p}>
+      <rect x="2" y="7" width="17" height="10" rx="2" />
+      <path d="M22 10v4" />
+      <path d="M6 10v4" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function IconBatteryFull({ size, ...p }: IconProps) {
+  return (
+    <svg {...base(size)} {...p}>
+      <rect x="2" y="7" width="17" height="10" rx="2" />
+      <path d="M22 10v4" />
+      <path d="M6 10v4M10 10v4M14 10v4" />
+    </svg>
+  );
+}
