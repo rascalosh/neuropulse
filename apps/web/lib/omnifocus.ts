@@ -78,16 +78,13 @@ export async function extractTextFromImage(
 
 // ─── Gemini Summarization ────────────────────────────────────────────────────
 
-const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-const MODEL = process.env.NEXT_PUBLIC_GEMINI_MODEL || 'gemini-3.1-flash-lite';
-const API_BASE = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
-
+// Calls Gemini through our own /api/gemini route instead of Google directly —
+// GEMINI_API_KEY lives server-side only and is never sent to the browser.
 async function callGemini(
   parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }>,
   maxTokens = 1024
 ): Promise<string> {
-  if (!GEMINI_API_KEY) throw new Error('NO_API_KEY');
-  const res = await fetch(`${API_BASE}?key=${GEMINI_API_KEY}`, {
+  const res = await fetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -95,9 +92,9 @@ async function callGemini(
       generationConfig: { temperature: 0.6, maxOutputTokens: maxTokens, topP: 0.9 },
     }),
   });
-  if (!res.ok) throw new Error(`API_ERROR ${res.status}`);
-  const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  const data: { text?: string; error?: string } = await res.json();
+  if (!res.ok || data.error) throw new Error(data.error ?? `API_ERROR ${res.status}`);
+  const text = data.text;
   if (!text) throw new Error('EMPTY_RESPONSE');
   return text.trim();
 }

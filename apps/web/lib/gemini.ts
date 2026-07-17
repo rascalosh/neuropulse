@@ -3,31 +3,9 @@ import type { QuestionnaireAnswers } from './storage';
 
 type Lang = 'id' | 'en';
 
-const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-const MODEL = process.env.NEXT_PUBLIC_GEMINI_MODEL || 'gemini-3.1-flash-lite';
-const API_BASE = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
-
-// Backup LLM — used only when Gemini reports a rate limit / quota error.
-// Grok's chat completions API is OpenAI-compatible.
-const GROK_API_KEY = process.env.NEXT_PUBLIC_GROK_API_KEY;
-const GROK_MODEL = process.env.NEXT_PUBLIC_GROK_MODEL || 'grok-4-fast';
-const GROK_API_BASE = 'https://api.x.ai/v1/chat/completions';
-
-interface GeminiResponse {
-  candidates?: Array<{
-    content?: {
-      parts?: Array<{ text?: string }>;
-    };
-  }>;
-  error?: { message: string };
-}
-
-interface GrokResponse {
-  choices?: Array<{
-    message?: { content?: string };
-  }>;
-  error?: { message: string };
-}
+// Both Gemini and its Grok backup are called through our own /api/* routes —
+// GEMINI_API_KEY and GROK_API_KEY live server-side only (app/api/gemini and
+// app/api/grok) and never reach the browser bundle.
 
 // Detects Gemini rate-limit / quota errors (HTTP 429, or Gemini's
 // RESOURCE_EXHAUSTED status) so we know when to switch to the Grok backup
@@ -63,16 +41,14 @@ const SYSTEM_INSTRUCTION: Record<Lang, string> = {
     'even as a typo or partial word mix. If unsure, use plain English.',
 };
 
+// Calls Gemini through our own /api/gemini route instead of Google directly —
+// GEMINI_API_KEY lives server-side only and is never sent to the browser.
 async function callGeminiRaw(prompt: string, maxTokens = 1024, expectJson = false, lang: Lang = 'id'): Promise<string> {
-  if (!GEMINI_API_KEY) {
-    throw new Error('NO_API_KEY — isi NEXT_PUBLIC_GEMINI_API_KEY di apps/web/.env lalu restart dev server');
-  }
-
-  const response = await fetch(`${API_BASE}?key=${GEMINI_API_KEY}`, {
+  const response = await fetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION[lang] }] },
+      systemInstruction: SYSTEM_INSTRUCTION[lang],
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.8,
@@ -83,16 +59,10 @@ async function callGeminiRaw(prompt: string, maxTokens = 1024, expectJson = fals
     }),
   });
 
-  if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error(`API_ERROR ${response.status}: ${body.slice(0, 200)}`);
-  }
+  const data: { text?: string; error?: string } = await response.json();
+  if (!response.ok || data.error) throw new Error(data.error ?? `API_ERROR ${response.status}`);
 
-  const data: GeminiResponse = await response.json();
-
-  if (data.error) throw new Error(data.error.message);
-
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = data.text;
   if (!text) throw new Error('EMPTY_RESPONSE');
 
   const cleaned = stripStrayCJK(text.trim());
@@ -106,38 +76,26 @@ async function callGeminiRaw(prompt: string, maxTokens = 1024, expectJson = fals
   return cleaned;
 }
 
+// Calls Grok through our own /api/grok route instead of xAI directly —
+// GROK_API_KEY lives server-side only and is never sent to the browser.
 async function callGrok(prompt: string, maxTokens = 1024, expectJson = false, lang: Lang = 'id'): Promise<string> {
-  if (!GROK_API_KEY) {
-    throw new Error('NO_GROK_KEY — isi NEXT_PUBLIC_GROK_API_KEY di apps/web/.env untuk mengaktifkan backup LLM');
-  }
-
-  const response = await fetch(GROK_API_BASE, {
+  const response = await fetch('/api/grok', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${GROK_API_KEY}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: GROK_MODEL,
       messages: [
         { role: 'system', content: SYSTEM_INSTRUCTION[lang] },
         { role: 'user', content: prompt },
       ],
-      temperature: 0.8,
-      max_tokens: maxTokens,
-      ...(expectJson ? { response_format: { type: 'json_object' } } : {}),
+      maxTokens,
+      expectJson,
     }),
   });
 
-  if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error(`GROK_API_ERROR ${response.status}: ${body.slice(0, 200)}`);
-  }
+  const data: { text?: string; error?: string } = await response.json();
+  if (!response.ok || data.error) throw new Error(data.error ?? `GROK_PROXY_ERROR ${response.status}`);
 
-  const data: GrokResponse = await response.json();
-  if (data.error) throw new Error(data.error.message);
-
-  const text = data.choices?.[0]?.message?.content;
+  const text = data.text;
   if (!text) throw new Error('GROK_EMPTY_RESPONSE');
 
   const cleaned = stripStrayCJK(text.trim());
@@ -157,7 +115,7 @@ async function callGemini(prompt: string, maxTokens = 1024, expectJson = false, 
   try {
     return await callGeminiRaw(prompt, maxTokens, expectJson, lang);
   } catch (err) {
-    if (isRateLimitError(err) && GROK_API_KEY) {
+    if (isRateLimitError(err)) {
       console.warn('[Gemini] rate limit tercapai — beralih ke Grok backup');
       try {
         return await callGrok(prompt, maxTokens, expectJson, lang);
@@ -175,15 +133,11 @@ async function callGeminiWithHistoryRaw(
   maxTokens = 800,
   lang: Lang = 'id'
 ): Promise<string> {
-  if (!GEMINI_API_KEY) {
-    throw new Error('NO_API_KEY — isi NEXT_PUBLIC_GEMINI_API_KEY di apps/web/.env lalu restart dev server');
-  }
-
-  const response = await fetch(`${API_BASE}?key=${GEMINI_API_KEY}`, {
+  const response = await fetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION[lang] }] },
+      systemInstruction: SYSTEM_INSTRUCTION[lang],
       contents: history,
       generationConfig: {
         temperature: 0.85,
@@ -193,15 +147,10 @@ async function callGeminiWithHistoryRaw(
     }),
   });
 
-  if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error(`API_ERROR ${response.status}: ${body.slice(0, 200)}`);
-  }
+  const data: { text?: string; error?: string } = await response.json();
+  if (!response.ok || data.error) throw new Error(data.error ?? `API_ERROR ${response.status}`);
 
-  const data: GeminiResponse = await response.json();
-  if (data.error) throw new Error(data.error.message);
-
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = data.text;
   if (!text) throw new Error('EMPTY_RESPONSE');
 
   return stripStrayCJK(text.trim());
@@ -212,10 +161,6 @@ async function callGrokWithHistory(
   maxTokens = 800,
   lang: Lang = 'id'
 ): Promise<string> {
-  if (!GROK_API_KEY) {
-    throw new Error('NO_GROK_KEY — isi NEXT_PUBLIC_GROK_API_KEY di apps/web/.env untuk mengaktifkan backup LLM');
-  }
-
   const messages = [
     { role: 'system', content: SYSTEM_INSTRUCTION[lang] },
     ...history.map((h) => ({
@@ -224,29 +169,16 @@ async function callGrokWithHistory(
     })),
   ];
 
-  const response = await fetch(GROK_API_BASE, {
+  const response = await fetch('/api/grok', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${GROK_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: GROK_MODEL,
-      messages,
-      temperature: 0.85,
-      max_tokens: maxTokens,
-    }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, maxTokens }),
   });
 
-  if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error(`GROK_API_ERROR ${response.status}: ${body.slice(0, 200)}`);
-  }
+  const data: { text?: string; error?: string } = await response.json();
+  if (!response.ok || data.error) throw new Error(data.error ?? `GROK_PROXY_ERROR ${response.status}`);
 
-  const data: GrokResponse = await response.json();
-  if (data.error) throw new Error(data.error.message);
-
-  const text = data.choices?.[0]?.message?.content;
+  const text = data.text;
   if (!text) throw new Error('GROK_EMPTY_RESPONSE');
 
   return stripStrayCJK(text.trim());
@@ -260,7 +192,7 @@ async function callGeminiWithHistory(
   try {
     return await callGeminiWithHistoryRaw(history, maxTokens, lang);
   } catch (err) {
-    if (isRateLimitError(err) && GROK_API_KEY) {
+    if (isRateLimitError(err)) {
       console.warn('[Gemini] rate limit tercapai — beralih ke Grok backup');
       try {
         return await callGrokWithHistory(history, maxTokens, lang);
