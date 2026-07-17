@@ -94,7 +94,7 @@ export default function CompanionChatbot() {
         avgEnergy,
         rsdEventsCount: store.rsdEvents.length,
         completedTasksToday: completedToday,
-      });
+      }, lang);
 
       const modelMsg: DisplayMessage = {
         id: `model-${Date.now()}`,
@@ -111,14 +111,17 @@ export default function CompanionChatbot() {
         {
           id: `err-${Date.now()}`,
           role: 'model',
-          content: 'Aduh, ada gangguan teknis bentar 😅 Tapi aku masih di sini ya. Coba lagi sebentar?',
+          content:
+            lang === 'id'
+              ? 'Aduh, ada gangguan teknis bentar 😅 Tapi aku masih di sini ya. Coba lagi sebentar?'
+              : "Ah, a small technical hiccup 😅 But I'm still here. Want to try again in a bit?",
           timestamp: new Date(),
         },
       ]);
     } finally {
       setIsTyping(false);
     }
-  }, [isTyping, messages, store]);
+  }, [isTyping, messages, store, lang]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -127,11 +130,23 @@ export default function CompanionChatbot() {
     }
   };
 
+  const renderInline = (line: string) => {
+    // Split on **bold** markers, keeping the markers so we know which parts to bold
+    const parts = line.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i}>{part.slice(2, -2)}</strong>;
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
+
   const formatContent = (text: string) => {
-    return text.split('\n').map((line, i) => (
+    const lines = text.split('\n');
+    return lines.map((line, i) => (
       <span key={i}>
-        {line}
-        {i < text.split('\n').length - 1 && <br />}
+        {renderInline(line)}
+        {i < lines.length - 1 && <br />}
       </span>
     ));
   };

@@ -5,7 +5,7 @@ import { useStorage } from '../hooks/useStorage';
 import { checkTaskDecay } from '../lib/storage';
 import { useLang } from '../contexts/providers';
 import { translations } from '../lib/i18n';
-import { IconSearch, IconActivity, IconBell, IconMoon } from './Icons';
+import { IconActivity, IconBell, IconMoon } from './Icons';
 import styles from './TopBar.module.css';
 
 export default function TopBar() {
@@ -13,7 +13,6 @@ export default function TopBar() {
   const { lang } = useLang();
   const tr = translations[lang];
   const router = useRouter();
-  const [query, setQuery] = useState('');
   const [mounted, setMounted] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
@@ -70,26 +69,8 @@ export default function TopBar() {
   const energyLabel = tr.energy[energy];
   const decayingCount = store.tasks.filter((t) => t.status === 'active' && checkTaskDecay(t)).length;
 
-  const submitSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && query.trim()) {
-      router.push('/tasks');
-      setQuery('');
-    }
-  };
-
   return (
     <header className={styles.topbar}>
-      <div className={styles.searchBox}>
-        <IconSearch size={16} className={styles.searchIcon} />
-        <input
-          className={styles.searchInput}
-          placeholder={lang === 'id' ? 'Cari task, mood, insight…' : 'Search tasks, mood, insights…'}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={submitSearch}
-        />
-      </div>
-
       <div className={styles.spacer} />
 
       <a href="/dashboard#energy-checkin" className={styles.energyPill}>
