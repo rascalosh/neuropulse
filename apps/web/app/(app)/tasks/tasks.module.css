@@ -167,7 +167,7 @@
 }
 .taskHeader:hover { background: var(--color-bg); }
 
-.taskInfo { flex: 1; }
+.taskInfo { flex: 1; min-width: 0; }
 
 .taskTitle {
   font-weight: var(--font-weight-bold);
@@ -175,6 +175,7 @@
   color: var(--color-text);
   line-height: var(--line-height-tight);
   margin-bottom: 4px;
+  overflow-wrap: anywhere;
 }
 
 .taskMeta {

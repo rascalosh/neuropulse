@@ -23,6 +23,14 @@
 }
 
 @media (max-width: 899px) {
+  /* Nav renders the mobile header as a direct child of .root; in row
+     direction it becomes a narrow left column and squeezes the content.
+     Stack everything vertically on mobile instead. */
+  .root {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .main {
     padding: 20px 16px 56px;
   }

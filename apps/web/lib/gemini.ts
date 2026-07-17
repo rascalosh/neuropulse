@@ -3,17 +3,16 @@ import type { QuestionnaireAnswers } from './storage';
 
 type Lang = 'id' | 'en';
 
-const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-const MODEL = process.env.NEXT_PUBLIC_GEMINI_MODEL || 'gemini-3.1-flash-lite';
-const API_BASE = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+// Both Gemini and its Grok backup are called through our own /api/* routes —
+// GEMINI_API_KEY and GROK_API_KEY live server-side only (app/api/gemini and
+// app/api/grok) and never reach the browser bundle.
 
-interface GeminiResponse {
-  candidates?: Array<{
-    content?: {
-      parts?: Array<{ text?: string }>;
-    };
-  }>;
-  error?: { message: string };
+// Detects Gemini rate-limit / quota errors (HTTP 429, or Gemini's
+// RESOURCE_EXHAUSTED status) so we know when to switch to the Grok backup
+// instead of falling straight through to the offline mock response.
+function isRateLimitError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /\b429\b/.test(msg) || /RESOURCE_EXHAUSTED/i.test(msg) || /rate.?limit/i.test(msg) || /quota/i.test(msg);
 }
 
 // Small/lite Gemini models occasionally leak stray CJK tokens into otherwise
@@ -42,16 +41,14 @@ const SYSTEM_INSTRUCTION: Record<Lang, string> = {
     'even as a typo or partial word mix. If unsure, use plain English.',
 };
 
-async function callGemini(prompt: string, maxTokens = 1024, expectJson = false, lang: Lang = 'id'): Promise<string> {
-  if (!GEMINI_API_KEY) {
-    throw new Error('NO_API_KEY — isi NEXT_PUBLIC_GEMINI_API_KEY di apps/web/.env lalu restart dev server');
-  }
-
-  const response = await fetch(`${API_BASE}?key=${GEMINI_API_KEY}`, {
+// Calls Gemini through our own /api/gemini route instead of Google directly —
+// GEMINI_API_KEY lives server-side only and is never sent to the browser.
+async function callGeminiRaw(prompt: string, maxTokens = 1024, expectJson = false, lang: Lang = 'id'): Promise<string> {
+  const response = await fetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION[lang] }] },
+      systemInstruction: SYSTEM_INSTRUCTION[lang],
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.8,
@@ -62,16 +59,10 @@ async function callGemini(prompt: string, maxTokens = 1024, expectJson = false, 
     }),
   });
 
-  if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error(`API_ERROR ${response.status}: ${body.slice(0, 200)}`);
-  }
+  const data: { text?: string; error?: string } = await response.json();
+  if (!response.ok || data.error) throw new Error(data.error ?? `API_ERROR ${response.status}`);
 
-  const data: GeminiResponse = await response.json();
-
-  if (data.error) throw new Error(data.error.message);
-
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = data.text;
   if (!text) throw new Error('EMPTY_RESPONSE');
 
   const cleaned = stripStrayCJK(text.trim());
@@ -85,20 +76,68 @@ async function callGemini(prompt: string, maxTokens = 1024, expectJson = false, 
   return cleaned;
 }
 
-async function callGeminiWithHistory(
+// Calls Grok through our own /api/grok route instead of xAI directly —
+// GROK_API_KEY lives server-side only and is never sent to the browser.
+async function callGrok(prompt: string, maxTokens = 1024, expectJson = false, lang: Lang = 'id'): Promise<string> {
+  const response = await fetch('/api/grok', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messages: [
+        { role: 'system', content: SYSTEM_INSTRUCTION[lang] },
+        { role: 'user', content: prompt },
+      ],
+      maxTokens,
+      expectJson,
+    }),
+  });
+
+  const data: { text?: string; error?: string } = await response.json();
+  if (!response.ok || data.error) throw new Error(data.error ?? `GROK_PROXY_ERROR ${response.status}`);
+
+  const text = data.text;
+  if (!text) throw new Error('GROK_EMPTY_RESPONSE');
+
+  const cleaned = stripStrayCJK(text.trim());
+  if (!cleaned || cleaned.length < text.trim().length * 0.5) {
+    throw new Error('GROK_FOREIGN_CHAR_LEAK');
+  }
+
+  return cleaned;
+}
+
+// Public entry point — tries Gemini first, and transparently switches to
+// Grok only when Gemini specifically reports a rate limit / quota error.
+// Any other Gemini failure (bad key, empty response, etc.) propagates
+// unchanged so the existing mock-fallback behavior in each feature function
+// still applies.
+async function callGemini(prompt: string, maxTokens = 1024, expectJson = false, lang: Lang = 'id'): Promise<string> {
+  try {
+    return await callGeminiRaw(prompt, maxTokens, expectJson, lang);
+  } catch (err) {
+    if (isRateLimitError(err)) {
+      console.warn('[Gemini] rate limit tercapai — beralih ke Grok backup');
+      try {
+        return await callGrok(prompt, maxTokens, expectJson, lang);
+      } catch (grokErr) {
+        console.warn('[Grok] backup juga gagal —', grokErr);
+        throw err;
+      }
+    }
+    throw err;
+  }
+}
+
+async function callGeminiWithHistoryRaw(
   history: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>,
   maxTokens = 800,
   lang: Lang = 'id'
 ): Promise<string> {
-  if (!GEMINI_API_KEY) {
-    throw new Error('NO_API_KEY — isi NEXT_PUBLIC_GEMINI_API_KEY di apps/web/.env lalu restart dev server');
-  }
-
-  const response = await fetch(`${API_BASE}?key=${GEMINI_API_KEY}`, {
+  const response = await fetch('/api/gemini', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION[lang] }] },
+      systemInstruction: SYSTEM_INSTRUCTION[lang],
       contents: history,
       generationConfig: {
         temperature: 0.85,
@@ -108,18 +147,62 @@ async function callGeminiWithHistory(
     }),
   });
 
-  if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error(`API_ERROR ${response.status}: ${body.slice(0, 200)}`);
-  }
+  const data: { text?: string; error?: string } = await response.json();
+  if (!response.ok || data.error) throw new Error(data.error ?? `API_ERROR ${response.status}`);
 
-  const data: GeminiResponse = await response.json();
-  if (data.error) throw new Error(data.error.message);
-
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = data.text;
   if (!text) throw new Error('EMPTY_RESPONSE');
 
   return stripStrayCJK(text.trim());
+}
+
+async function callGrokWithHistory(
+  history: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>,
+  maxTokens = 800,
+  lang: Lang = 'id'
+): Promise<string> {
+  const messages = [
+    { role: 'system', content: SYSTEM_INSTRUCTION[lang] },
+    ...history.map((h) => ({
+      role: h.role === 'model' ? 'assistant' : 'user',
+      content: h.parts.map((p) => p.text).join('\n'),
+    })),
+  ];
+
+  const response = await fetch('/api/grok', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, maxTokens }),
+  });
+
+  const data: { text?: string; error?: string } = await response.json();
+  if (!response.ok || data.error) throw new Error(data.error ?? `GROK_PROXY_ERROR ${response.status}`);
+
+  const text = data.text;
+  if (!text) throw new Error('GROK_EMPTY_RESPONSE');
+
+  return stripStrayCJK(text.trim());
+}
+
+async function callGeminiWithHistory(
+  history: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>,
+  maxTokens = 800,
+  lang: Lang = 'id'
+): Promise<string> {
+  try {
+    return await callGeminiWithHistoryRaw(history, maxTokens, lang);
+  } catch (err) {
+    if (isRateLimitError(err)) {
+      console.warn('[Gemini] rate limit tercapai — beralih ke Grok backup');
+      try {
+        return await callGrokWithHistory(history, maxTokens, lang);
+      } catch (grokErr) {
+        console.warn('[Grok] backup juga gagal —', grokErr);
+        throw err;
+      }
+    }
+    throw err;
+  }
 }
 
 function warnMockFallback(feature: string, err: unknown) {
