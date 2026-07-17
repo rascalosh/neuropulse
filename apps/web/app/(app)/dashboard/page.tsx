@@ -39,16 +39,53 @@ export default function DashboardPage() {
   const { switchCount, totalLostSeconds } = useContextSwitch();
   const [greeting, setGreeting] = useState('');
   const [xpToast, setXpToast] = useState<string | null>(null);
-  const [showMore, setShowMore] = useState(false);
   const [quickAddTitle, setQuickAddTitle] = useState('');
 
   const { lang } = useLang();
   const tr = translations[lang];
   const [mounted, setMounted] = useState(false);
+  const [randomQuote, setRandomQuote] = useState({ text: '', source: '' });
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    const quotes = lang === 'id' ? [
+      {
+        text: "Memiliki otak ADHD itu seperti memiliki mesin mobil balap Ferrari dengan rem sepeda mini. Kamu memiliki kapasitas luar biasa untuk berpikir kreatif dan cepat, tugasmu hanyalah belajar membangun kekuatan rem tersebut agar kamu bisa mengendalikan ke mana mesin hebatmu akan melaju.",
+        source: "Dr. Edward Hallowell"
+      },
+      {
+        text: "Jangan paksa dirimu untuk muat dalam cetakan kotak orang neurotipikal. Otakmu adalah sebuah galaksi dengan pola berputar yang unik. Rayakan setiap lompatan ide, temukan ritme kerjamu sendiri, dan biarkan keunikanmu menjadi kekuatan terbesarmu.",
+        source: "Sark"
+      },
+      {
+        text: "Prokrastinasi bagi ADHD bukanlah bentuk malas atau kurang motivasi, melainkan respons emosional saat menghadapi tugas yang terlihat luar biasa besar. Sadarilah itu, maafkan dirimu, dan mulailah memecah tugas tersebut menjadi langkah-langkah mikro yang ramah untuk otakmu.",
+        source: "Dr. Tamara Rosier"
+      },
+      {
+        text: "Setiap orang adalah jenius. Namun jika kamu menilai seekor ikan dari kemampuannya memanjat pohon, ia akan menjalani hidupnya dengan percaya bahwa ia bodoh. Temukan pohonmu sendiri, atau lebih baik lagi, berenanglah bebas di samudera luas yang menjadi tempatmu bersinar.",
+        source: "Albert Einstein"
+      }
+    ] : [
+      {
+        text: "Having an ADHD brain is like having a Ferrari race car engine with bicycle brakes. You have an incredible capacity for fast, creative thinking; your only challenge is learning to build stronger brakes so you can control where that amazing engine takes you.",
+        source: "Dr. Edward Hallowell"
+      },
+      {
+        text: "Do not force yourself to fit into the square mold of neurotypical expectations. Your brain is a galaxy with unique swirling patterns. Celebrate every leap of thought, discover your own workflow rhythm, and let your uniqueness be your superpower.",
+        source: "Sark"
+      },
+      {
+        text: "Procrastination for ADHD is not laziness or lack of motivation; it is an emotional response to an overwhelming task. Recognize this, forgive yourself, and begin breaking that mountain down into small, brain-friendly micro-steps.",
+        source: "Dr. Tamara Rosier"
+      },
+      {
+        text: "Everybody is a genius. But if you judge a fish by its ability to climb a tree, it will live its whole life believing that it is stupid. Find your own tree, or better yet, swim freely in the vast ocean where you were always meant to shine.",
+        source: "Albert Einstein"
+      }
+    ];
+    const randomIndex = Math.floor(Math.random() * quotes.length);
+    setRandomQuote(quotes[randomIndex] || quotes[0]);
+  }, [lang]);
 
   const levelInfo = getLevelInfo(store.totalXP);
 
@@ -337,7 +374,10 @@ export default function DashboardPage() {
         <div className={styles.rightCol}>
           <div className={styles.quoteCardStandalone}>
             <span className={styles.quoteCardIcon}><IconSmile size={16} /></span>
-            <p className={styles.quoteText}>{tr.dashboard.quote}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <p className={styles.quoteText}>"{randomQuote.text}"</p>
+              {randomQuote.source && <span className={styles.quoteSource}>— {randomQuote.source}</span>}
+            </div>
           </div>
 
           <div className={styles.energyGuideCard}>
@@ -354,81 +394,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-
-      {/* ── Show More ────────────────────────────────────────── */}
-      <button
-        type="button"
-        className={styles.moreToggle}
-        onClick={() => setShowMore((v) => !v)}
-        aria-expanded={showMore}
-      >
-        <span>
-          {showMore
-            ? (lang === 'id' ? 'Sembunyikan' : 'Hide')
-            : (lang === 'id' ? `Lihat statistik & streak` : 'Show stats & streak')}
-        </span>
-        <span className={`${styles.chevron} ${showMore ? styles.chevronOpen : ''}`}>↓</span>
-      </button>
-
-      {showMore && (
-        <div className={styles.moreArea}>
-          {/* Stats row — 2 col only */}
-          <div className={styles.statsRow}>
-            <div className={styles.statCard}>
-              <div className={styles.statIcon} style={{ color: 'var(--blue-500)', background: 'var(--blue-50)' }}>
-                <IconCheck size={18} />
-              </div>
-              <div>
-                <div className={styles.statValue}>{completedToday.length}</div>
-                <div className={styles.statLabel}>{tr.dashboard.done_today}</div>
-              </div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statIcon} style={{ color: 'var(--color-warning)', background: 'var(--color-warning-bg)' }}>
-                <IconActivity size={18} />
-              </div>
-              <div>
-                <div className={styles.statValue}>{switchCount}</div>
-                <div className={styles.statLabel}>Context switch</div>
-              </div>
-            </div>
-            <div className={styles.statCard}>
-              <div className={styles.statIcon} style={{ color: 'var(--color-error)', background: 'var(--color-error-bg)' }}>
-                <IconClock size={18} />
-              </div>
-              <div>
-                <div className={styles.statValue}>{lostMinutes}m</div>
-                <div className={styles.statLabel}>Fokus hilang</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Streak */}
-          {store.streak > 0 && (
-            <div className={styles.streakCard}>
-              <div className={styles.streakLeft}>
-                <span className={styles.streakIcon}><IconFlame size={20} /></span>
-                <div>
-                  <div className={styles.streakValue}>{store.streak} hari</div>
-                  <div className={styles.streakLabel}>streak lembut · tanpa tekanan</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Focus Mirror */}
-          <Link href="/focus-mirror" className={styles.focusMirrorCard}>
-            <div className={styles.focusMirrorIcon}><IconEye size={18} /></div>
-            <div>
-              <div className={styles.focusMirrorTitle}>Focus Mirror</div>
-              <div className={styles.focusMirrorSub}>
-                Skor fokus: {focusScore} · {switchCount} switch hari ini
-              </div>
-            </div>
-            <IconArrowRight size={16} style={{ marginLeft: 'auto', color: 'var(--color-text-muted)' }} />
-          </Link>
-        </div>
-      )}
     </div>
   );
 }
