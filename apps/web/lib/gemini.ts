@@ -7,6 +7,12 @@ const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 const MODEL = process.env.NEXT_PUBLIC_GEMINI_MODEL || 'gemini-3.1-flash-lite';
 const API_BASE = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
+// Backup LLM — used only when Gemini reports a rate limit / quota error.
+// Grok's chat completions API is OpenAI-compatible.
+const GROK_API_KEY = process.env.NEXT_PUBLIC_GROK_API_KEY;
+const GROK_MODEL = process.env.NEXT_PUBLIC_GROK_MODEL || 'grok-4-fast';
+const GROK_API_BASE = 'https://api.x.ai/v1/chat/completions';
+
 interface GeminiResponse {
   candidates?: Array<{
     content?: {
@@ -14,6 +20,21 @@ interface GeminiResponse {
     };
   }>;
   error?: { message: string };
+}
+
+interface GrokResponse {
+  choices?: Array<{
+    message?: { content?: string };
+  }>;
+  error?: { message: string };
+}
+
+// Detects Gemini rate-limit / quota errors (HTTP 429, or Gemini's
+// RESOURCE_EXHAUSTED status) so we know when to switch to the Grok backup
+// instead of falling straight through to the offline mock response.
+function isRateLimitError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /\b429\b/.test(msg) || /RESOURCE_EXHAUSTED/i.test(msg) || /rate.?limit/i.test(msg) || /quota/i.test(msg);
 }
 
 // Small/lite Gemini models occasionally leak stray CJK tokens into otherwise
@@ -42,7 +63,7 @@ const SYSTEM_INSTRUCTION: Record<Lang, string> = {
     'even as a typo or partial word mix. If unsure, use plain English.',
 };
 
-async function callGemini(prompt: string, maxTokens = 1024, expectJson = false, lang: Lang = 'id'): Promise<string> {
+async function callGeminiRaw(prompt: string, maxTokens = 1024, expectJson = false, lang: Lang = 'id'): Promise<string> {
   if (!GEMINI_API_KEY) {
     throw new Error('NO_API_KEY — isi NEXT_PUBLIC_GEMINI_API_KEY di apps/web/.env lalu restart dev server');
   }
@@ -85,7 +106,71 @@ async function callGemini(prompt: string, maxTokens = 1024, expectJson = false, 
   return cleaned;
 }
 
-async function callGeminiWithHistory(
+async function callGrok(prompt: string, maxTokens = 1024, expectJson = false, lang: Lang = 'id'): Promise<string> {
+  if (!GROK_API_KEY) {
+    throw new Error('NO_GROK_KEY — isi NEXT_PUBLIC_GROK_API_KEY di apps/web/.env untuk mengaktifkan backup LLM');
+  }
+
+  const response = await fetch(GROK_API_BASE, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${GROK_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: GROK_MODEL,
+      messages: [
+        { role: 'system', content: SYSTEM_INSTRUCTION[lang] },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.8,
+      max_tokens: maxTokens,
+      ...(expectJson ? { response_format: { type: 'json_object' } } : {}),
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`GROK_API_ERROR ${response.status}: ${body.slice(0, 200)}`);
+  }
+
+  const data: GrokResponse = await response.json();
+  if (data.error) throw new Error(data.error.message);
+
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) throw new Error('GROK_EMPTY_RESPONSE');
+
+  const cleaned = stripStrayCJK(text.trim());
+  if (!cleaned || cleaned.length < text.trim().length * 0.5) {
+    throw new Error('GROK_FOREIGN_CHAR_LEAK');
+  }
+
+  return cleaned;
+}
+
+// Public entry point — tries Gemini first, and transparently switches to
+// Grok only when Gemini specifically reports a rate limit / quota error.
+// Any other Gemini failure (bad key, empty response, etc.) propagates
+// unchanged so the existing mock-fallback behavior in each feature function
+// still applies.
+async function callGemini(prompt: string, maxTokens = 1024, expectJson = false, lang: Lang = 'id'): Promise<string> {
+  try {
+    return await callGeminiRaw(prompt, maxTokens, expectJson, lang);
+  } catch (err) {
+    if (isRateLimitError(err) && GROK_API_KEY) {
+      console.warn('[Gemini] rate limit tercapai — beralih ke Grok backup');
+      try {
+        return await callGrok(prompt, maxTokens, expectJson, lang);
+      } catch (grokErr) {
+        console.warn('[Grok] backup juga gagal —', grokErr);
+        throw err;
+      }
+    }
+    throw err;
+  }
+}
+
+async function callGeminiWithHistoryRaw(
   history: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>,
   maxTokens = 800,
   lang: Lang = 'id'
@@ -120,6 +205,72 @@ async function callGeminiWithHistory(
   if (!text) throw new Error('EMPTY_RESPONSE');
 
   return stripStrayCJK(text.trim());
+}
+
+async function callGrokWithHistory(
+  history: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>,
+  maxTokens = 800,
+  lang: Lang = 'id'
+): Promise<string> {
+  if (!GROK_API_KEY) {
+    throw new Error('NO_GROK_KEY — isi NEXT_PUBLIC_GROK_API_KEY di apps/web/.env untuk mengaktifkan backup LLM');
+  }
+
+  const messages = [
+    { role: 'system', content: SYSTEM_INSTRUCTION[lang] },
+    ...history.map((h) => ({
+      role: h.role === 'model' ? 'assistant' : 'user',
+      content: h.parts.map((p) => p.text).join('\n'),
+    })),
+  ];
+
+  const response = await fetch(GROK_API_BASE, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${GROK_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: GROK_MODEL,
+      messages,
+      temperature: 0.85,
+      max_tokens: maxTokens,
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`GROK_API_ERROR ${response.status}: ${body.slice(0, 200)}`);
+  }
+
+  const data: GrokResponse = await response.json();
+  if (data.error) throw new Error(data.error.message);
+
+  const text = data.choices?.[0]?.message?.content;
+  if (!text) throw new Error('GROK_EMPTY_RESPONSE');
+
+  return stripStrayCJK(text.trim());
+}
+
+async function callGeminiWithHistory(
+  history: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>,
+  maxTokens = 800,
+  lang: Lang = 'id'
+): Promise<string> {
+  try {
+    return await callGeminiWithHistoryRaw(history, maxTokens, lang);
+  } catch (err) {
+    if (isRateLimitError(err) && GROK_API_KEY) {
+      console.warn('[Gemini] rate limit tercapai — beralih ke Grok backup');
+      try {
+        return await callGrokWithHistory(history, maxTokens, lang);
+      } catch (grokErr) {
+        console.warn('[Grok] backup juga gagal —', grokErr);
+        throw err;
+      }
+    }
+    throw err;
+  }
 }
 
 function warnMockFallback(feature: string, err: unknown) {
