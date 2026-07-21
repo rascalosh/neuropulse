@@ -1,159 +1,162 @@
-# Turborepo starter
+# 🧠 NeuroPulse
 
-This Turborepo starter is maintained by the Turborepo core team.
+**Companion app untuk orang dengan ADHD** — membantu memecah tugas yang overwhelming, menjaga fokus, meregulasi emosi, dan membangun momentum lewat gamifikasi. Dibangun dengan pendekatan *ADHD-friendly design*: micro-wins, friksi rendah, dan visual yang tenang.
 
-## Using this example
+Mendukung dua bahasa (🇮🇩 Indonesia / 🇬🇧 English), light & dark mode, serta berbagai alat aksesibilitas.
 
-Run the following command:
+---
 
-```sh
-npx create-turbo@latest
+## ✨ Fitur
+
+### Produktivitas
+| Fitur | Deskripsi |
+|---|---|
+| **AI Task Decomposition** | Pecah satu task besar menjadi 4–6 micro-task (2–10 menit) lengkap dengan fase, estimasi waktu, dan penanda paralel — divisualisasikan sebagai *quest path* ala game. Mendukung input suara. |
+| **Interest Reframing** | Judul micro-task di-reframe memakai metafora dari minat user (anime, game, musik, dll.) agar lebih menarik dikerjakan. |
+| **Friction Buster** | Saat user benar-benar stuck, AI mengambil alih langkah pertama: menulis draft email, template, outline, atau referensi awal yang langsung bisa dipakai. |
+| **Task Decay & Stuck Detection** | Task yang sering dilihat tapi tidak dikerjakan terdeteksi sebagai *task paralysis* dan memicu banner intervensi. |
+| **Focus Mirror** | Sesi fokus dengan kamera + MediaPipe face tracking untuk memantau fokus secara real-time, lengkap dengan skor fokus dan statistik sesi. |
+| **Body Double** | Ruang kerja bareng virtual, video *study-with-me* dari YouTube, dan ambient audio (hujan, kafe, lofi) dengan pomodoro timer. |
+| **OmniFocus Reader** | Mode baca ADHD-friendly: Bionic Reading, ekstraksi teks PDF, analisis gambar (Gemini Vision), perapian teks berantakan, ringkasan poin-poin, dan text-to-speech. |
+
+### Kesehatan Mental
+| Fitur | Deskripsi |
+|---|---|
+| **Energy Check-in** | Catat level energi harian (dengan maskot ekspresif) + tulis perasaan; AI memberikan ringkasan empatik, saran konkret, afirmasi, dan deteksi *warning level* (normal / at-risk / crisis). |
+| **Pulse — Companion Chatbot** | Teman curhat AI yang hangat dan tidak menghakimi, sadar konteks (energi rata-rata, episode RSD, task selesai hari ini). Tersedia di semua halaman. |
+| **Clinical Report** | Generate laporan ringkasan perilaku (task, RSD, energi, context switch) yang bisa dibawa ke tenaga kesehatan profesional. |
+| **Psychologist Marketplace** | Direktori psikolog spesialis ADHD dengan booking sesi, diskon per-tier, dan manajemen jadwal di halaman *My Sessions*. |
+
+### Motivasi & Lainnya
+| Fitur | Deskripsi |
+|---|---|
+| **Gamifikasi** | XP, 8 level (Benih 🌱 → Mythic 🌟), streak harian, dan bonus login. |
+| **Dopamine Machine** | Mesin gachapon berisi reward buatan user sendiri — selesaikan task, putar mesinnya, nikmati hadiahnya. |
+| **Onboarding Kuesioner** | Kuesioner mendalam (kronotipe, rentang fokus, trigger prokrastinasi, sensitivitas RSD, dll.) yang disintesis AI menjadi *knowledge base* personal. |
+| **Tier & Pricing** | 4 tier langganan dengan limit fitur (decompose, bionic reading, laporan klinis), durasi fokus maksimal, dan diskon sesi psikolog. |
+| **Aksesibilitas** | Panel khusus: skala font, kontras tinggi, reduced motion, Bionic Reading global, dan TTS di seluruh halaman. |
+
+---
+
+## 🤖 Arsitektur AI
+
+```
+Client (lib/gemini.ts)
+   │
+   ▼
+/api/gemini  ──►  Google Gemini (gemini-3.1-flash-lite)
+   │                    │
+   │              rate limit / quota? (429, RESOURCE_EXHAUSTED)
+   │                    ▼
+   └──────────►  /api/grok  ──►  xAI Grok (grok-4-fast)
+                        │
+                  masih gagal?
+                        ▼
+                 Mock fallback offline (selalu ada respons)
 ```
 
-## What's inside?
+- **Semua API key LLM hanya hidup di server** (Next.js Route Handlers) — tidak pernah masuk bundle client.
+- **Auto-switch ke Grok** hanya saat Gemini melaporkan rate limit / kehabisan kuota; error lain tetap jatuh ke mock fallback.
+- Guardrail bahasa (ID/EN) + pembersihan karakter CJK liar diterapkan di kedua provider.
 
-This Turborepo includes the following packages/apps:
+---
 
-### Apps and Packages
+## 🛠 Tech Stack
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+| Layer | Teknologi |
+|---|---|
+| **Monorepo** | [Turborepo](https://turborepo.dev/) + npm workspaces |
+| **Frontend** | [Next.js 16](https://nextjs.org/) (App Router, Turbopack) · React 19 · TypeScript 5.9 |
+| **Styling** | CSS Modules + design tokens custom (light/dark/accent presets) · [Framer Motion](https://www.framer.com/motion/) |
+| **Auth & Database** | [Supabase](https://supabase.com/) (`@supabase/ssr` untuk session middleware) + SQL migrations |
+| **AI — Text** | Google **Gemini** (utama) · xAI **Grok** (backup otomatis) via server-side proxy |
+| **AI — Vision** | Gemini Vision (analisis gambar) · [MediaPipe Tasks Vision](https://ai.google.dev/edge/mediapipe) (face landmark untuk Focus Mirror) |
+| **Dokumen & Suara** | [pdf.js](https://mozilla.github.io/pdf.js/) (ekstraksi PDF) · Google TTS + Web Speech API |
+| **Backend API** | [FastAPI](https://fastapi.tiangolo.com/) (Python 3.12) + Supabase client — health check & fondasi API |
+| **Tooling** | ESLint 9 · Prettier · shared config packages |
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+---
 
-### Utilities
+## 📁 Struktur Monorepo
 
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+```
+neuropulse/
+├── apps/
+│   ├── web/                  # Next.js app (aplikasi utama)
+│   │   ├── app/
+│   │   │   ├── (app)/        # Halaman ber-auth: dashboard, tasks, focus-mirror,
+│   │   │   │                 #   body-double, energy-checkin, dopamine, omnifocus,
+│   │   │   │                 #   report, psychologists, my-sessions, pricing,
+│   │   │   │                 #   leveling, profile
+│   │   │   ├── api/          # Route handlers: gemini, grok, decompose, bionic,
+│   │   │   │                 #   bookings, payments, psychologists, reports, ...
+│   │   │   ├── login/        # Auth (Supabase)
+│   │   │   └── onboarding/   # Kuesioner + sintesis AI
+│   │   ├── components/       # Nav, TopBar, CompanionChatbot, OmniFocusReader,
+│   │   │                     #   AccessibilityPanel, ReadingAids
+│   │   ├── lib/              # gemini, gamification, tiers, storage, i18n, tts
+│   │   ├── hooks/            # useStorage, useContextSwitch
+│   │   └── supabase/         # Migrations & seed
+│   └── backend/              # FastAPI + Supabase (Python)
+├── packages/
+│   ├── ui/                   # Komponen React shared
+│   ├── eslint-config/        # Konfigurasi ESLint shared
+│   └── typescript-config/    # tsconfig shared
+└── turbo.json
 ```
 
-Without global `turbo`, use your package manager:
+---
 
-```sh
-cd my-turborepo
-npx turbo build
-npm dlx turbo build
-npm exec turbo build
+## 🚀 Menjalankan Secara Lokal
+
+**Prasyarat:** Node.js ≥ 18, npm ≥ 11, Python 3.12 (untuk backend).
+
+```bash
+# 1. Install dependensi JS
+npm install
+
+# 2. Setup env frontend
+cp apps/web/.env.example apps/web/.env
+#    → isi kredensial Supabase, GEMINI_API_KEY, GROK_API_KEY (opsional)
+
+# 3. Setup backend Python (sekali saja)
+cd apps/backend
+python -m venv venv
+venv/Scripts/pip install -r requirements.txt   # Windows
+# venv/bin/pip install -r requirements.txt     # macOS/Linux
+cp .env.example .env                            # isi kredensial Supabase
+cd ../..
+
+# 4. Jalankan semuanya (web :3000 + backend :8000)
+npm run dev
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+### Environment Variables (`apps/web/.env`)
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+| Variabel | Sisi | Keterangan |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Client | URL project Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client | Anon/publishable key Supabase |
+| `GEMINI_API_KEY` | **Server only** | API key Google Gemini — dipakai `/api/gemini` |
+| `GEMINI_MODEL` | Server | Opsional, default `gemini-3.1-flash-lite` |
+| `GROK_API_KEY` | **Server only** | API key xAI — backup otomatis saat Gemini limit |
+| `GROK_MODEL` | Server | Opsional, default `grok-4-fast` |
+| `NEXT_PUBLIC_GOOGLE_TTS_API_KEY` | Client | Text-to-speech |
 
-```sh
-turbo build --filter=docs
+> ⚠️ Key **tanpa** prefix `NEXT_PUBLIC_` sengaja dibaca hanya di server (Route Handlers) agar tidak pernah ter-bundle ke JavaScript client.
+
+### Perintah Lain
+
+```bash
+npm run build          # Build semua workspace
+npm run lint           # Lint semua workspace
+npm run check-types    # Typecheck semua workspace
+npx turbo dev --filter=web   # Jalankan web saja
 ```
 
-Without global `turbo`:
+---
 
-```sh
-npx turbo build --filter=docs
-npm exec turbo build --filter=docs
-npm exec turbo build --filter=docs
-```
+## 📦 Deployment
 
-### Develop
-
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-npm exec turbo dev
-npm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-npm exec turbo dev --filter=web
-npm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-npm exec turbo login
-npm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-npm exec turbo link
-npm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+- **Frontend** di-deploy ke **Vercel** (root: `apps/web`, install command `npm install --prefix=../..`). Pastikan semua env var di atas terisi di dashboard Vercel — termasuk `GEMINI_API_KEY`/`GROK_API_KEY` versi server-side.
+- **Database & Auth** dikelola Supabase; jalankan migrations di `apps/web/supabase/migrations`.
